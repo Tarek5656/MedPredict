@@ -1,0 +1,43 @@
+﻿# env / secrets
+.env
+.env.*
+*.env
+secrets/
+*.key
+*.pem
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# django
+*.sqlite3
+media/
+staticfiles/
+
+# node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# build artifacts
+dist/
+build/
+.coverage
+.DS_Store
+.idea/
+.vscode/
+
+# docker
+*.log
+
+# large data
+ai-service/training/data/*.csv
+
