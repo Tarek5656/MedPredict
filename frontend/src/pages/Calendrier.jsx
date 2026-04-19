@@ -176,29 +176,67 @@ export default function Calendrier() {
         </div>
 
         {/* Liste du jour */}
-        <div className="card" style={{ padding: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <h3 style={{ margin: 0 }}>RDV du {selectedDay.toLocaleDateString()}</h3>
-            <Link to={`/calendrier/jour?date=${toYMD(selectedDay)}`} style={{ marginLeft: "auto" }}>
-              Ouvrir agenda
+        <div className="card" style={{ padding: '24px', backgroundColor: 'white', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                {selectedDay.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </h3>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--primary-light)', color: '#48B39B', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, marginTop: '4px' }}>
+                {rdvOfSelectedDay.length} Rendez-vous
+              </div>
+            </div>
+            <Link to={`/calendrier/jour?date=${toYMD(selectedDay)}`} 
+              style={{ fontSize: '0.875rem', color: '#48B39B', fontWeight: 600, textDecoration: 'none', background: 'var(--bg-color)', padding: '8px 16px', borderRadius: '999px' }}
+              className="hover-bg-slate"
+            >
+              Agenda
             </Link>
           </div>
 
           {rdvOfSelectedDay.length === 0 ? (
-            <p className="muted">Aucun rendez-vous.</p>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🗓️</div>
+              <p style={{ margin: 0, fontWeight: 500 }}>Aucun rendez-vous de planifié.</p>
+            </div>
           ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              {rdvOfSelectedDay.map((r) => (
-                <div key={r.id} style={{ border: "1px solid var(--border-color)", borderRadius: 12, padding: 12 }}>
-                  <div style={{ fontWeight: 800 }}>
-                    {new Date(r.date_heure).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} • {r.duree_minutes} min
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {rdvOfSelectedDay.map((r) => {
+                const isUrgent = r.statut_effectif === 'URGENT';
+                return (
+                  <div key={r.id} style={{ 
+                    position: 'relative', background: 'var(--bg-color)', borderRadius: 16, padding: '16px 20px',
+                    border: '1px solid var(--border-color)', borderLeft: `6px solid ${isUrgent ? '#ef4444' : '#48B39B'}`,
+                    transition: 'transform 0.2s', cursor: 'pointer', overflow: 'hidden'
+                  }} className="hover-shadow">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#48B39B", fontWeight: 800, fontSize: "1rem" }}>
+                        <i className="fa-regular fa-clock" style={{ fontSize: "1rem" }}></i>
+                        {new Date(r.date_heure).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                      <div style={{ 
+                        fontSize: '0.65rem', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', 
+                        background: isUrgent ? '#fee2e2' : 'white', color: isUrgent ? '#ef4444' : 'var(--text-muted)',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid var(--border-color)'
+                      }}>
+                        {r.statut_effectif || 'STANDARD'}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-main)', marginBottom: '4px' }}>
+                      <i className="fa-regular fa-user" style={{ fontSize: "1.1rem", color: '#48B39B' }}></i>
+                      {r.patient_nom} {r.patient_prenom}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                      <span style={{ opacity: 0.6 }}>Motif:</span>
+                      <span style={{ fontWeight: 500 }}>{r.motif || "Consultation standard"}</span>
+                      <span style={{ margin: '0 4px', opacity: 0.3 }}>•</span>
+                      <span>{r.duree_minutes} min</span>
+                    </div>
                   </div>
-                  <div style={{ opacity: 0.85 }}>
-                    {r.patient_nom} {r.patient_prenom}
-                  </div>
-                  <div style={{ opacity: 0.7 }}>{r.motif || "—"} • {r.statut_effectif}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

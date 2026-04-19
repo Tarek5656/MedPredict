@@ -12,6 +12,8 @@ import ConsultationListe from "./pages/patient/ConsultationListe.jsx";
 import Calendrier from "./pages/Calendrier.jsx";
 import CalendrierJour from "./pages/CalendrierJour.jsx";
 import Analyses from "./pages/medecin/Analyses.jsx";
+import LandingPage from "./pages/LandingPage.jsx";
+import Overview from "./pages/Overview.jsx";
 import { applyTheme, themeFromMe } from "./utils/theme";
 import userService from "./services/userService.js";
 
@@ -84,10 +86,17 @@ export default function App() {
       <AppLayout>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/unauthorized" element={<div>Accès refusé</div>} />
 
-          <Route path="/" element={<Navigate to="/patients" replace />} />
-
+          <Route
+            path="/overview"
+            element={
+              <RoleRoute allowGroups={["MEDECIN", "SECRETAIRE", "PATIENT"]}>
+                <Overview />
+              </RoleRoute>
+            }
+          />
           <Route
             path="/patients"
             element={

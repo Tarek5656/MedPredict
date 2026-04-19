@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* Base (valeurs communes) */
@@ -41,6 +43,7 @@
 :root[data-theme="blue"] {
   --primary: #2563EB;
   --primary-hover: #1D4ED8;
+  --primary-light: #DBEAFE;
 
   --shadow-sm: 0 40px 80px -20px rgba(37, 99, 235, 0.08);
   --shadow-md: 0 40px 80px -10px rgba(37, 99, 235, 0.12);
@@ -53,6 +56,7 @@
 :root[data-theme="red"] {
   --primary: #DC2626;
   --primary-hover: #B91C1C;
+  --primary-light: #FEE2E2;
 
   --shadow-sm: 0 40px 80px -20px rgba(220, 38, 38, 0.08);
   --shadow-md: 0 40px 80px -10px rgba(220, 38, 38, 0.12);
@@ -64,6 +68,7 @@
 :root[data-theme="yellow"] {
   --primary: #f59e0b;
   --primary-hover: #d97706;
+  --primary-light: #FEF3C7;
 
   --shadow-sm: 0 40px 80px -20px rgba(245, 158, 11, 0.08);
   --shadow-md: 0 40px 80px -10px rgba(245, 158, 11, 0.12);
@@ -214,6 +219,16 @@ td {
   background-color: #e6e8ea;
 }
 
+.search-input-focus:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px var(--primary-light), inset 0 2px 4px 0 rgba(0, 0, 0, 0.05) !important;
+  background-color: white !important;
+}
+
+.hover-shadow:hover {
+  background-color: #e6e8ea;
+}
+
 
 tr:last-child td {
   border-bottom: none;
@@ -237,6 +252,25 @@ tr:hover td {
 .badge-error {
   background-color: #ffdad6;
   color: #93000a;
+}
+
+/* Dashboard Hero Card */
+.card-hero {
+  background: linear-gradient(to bottom right, var(--primary), var(--primary-hover));
+  color: white;
+}
+
+:root[data-theme="yellow"] .card-hero {
+  background: white;
+  color: #191c1e; /* Dark text for yellow theme for better contrast */
+}
+
+.text-primary-light {
+  color: var(--primary-light);
+}
+
+:root[data-theme="yellow"] .text-primary-light {
+  color: rgba(25, 28, 30, 0.7); /* Subtle dark text for yellow theme */
 }
 
 @keyframes slideInRight {

@@ -3,6 +3,7 @@ import { useNavigate} from "react-router-dom";
 import userService from "../services/userService";
 import SlideDrawer from "../components/SlideDrawer";
 import Settings from "../components/Settings";
+import { Bell, Settings as SettingsIcon } from "lucide-react";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -50,29 +51,43 @@ export default function Header() {
       <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
         <h1 style={{ fontSize: "1.25rem", margin: 0, fontWeight: 700, color: "var(--primary)" }}>Espace {getEspaceLabel(me)}</h1>
         <div style={{ position: "relative", width: "384px" }}>
-          <span className="material-symbols-outlined" style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 20 }}>search</span>
+          <i className="fa-solid fa-magnifying-glass" style={{ 
+            position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", 
+            color: "var(--primary)", fontSize: "1rem", opacity: 0.6 
+          }}></i>
           <input 
             type="text" 
             placeholder="Search patients, records..." 
             style={{ 
-              width: "100%", backgroundColor: "var(--card-bg)", border: "none", borderRadius: "9999px",
-              padding: "12px 16px 12px 48px", fontSize: "0.875rem"
+              width: "100%", backgroundColor: "var(--bg-color)", border: "1px solid var(--border-color)", 
+              borderRadius: "9999px", padding: "12px 20px 12px 52px", fontSize: "0.875rem",
+              boxShadow: "inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)", outline: 'none',
+              transition: 'all 0.2s ease'
             }}
+            className="search-input-focus"
           />
         </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <button style={{ width: 44, height: 44, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer" }} className="hover-bg-slate">
-          <span className="material-symbols-outlined" style={{ color: "var(--text-muted)", fontSize: 22 }}>notifications</span>
+        <button style={{ 
+          width: 44, height: 44, borderRadius: "50%", display: "flex", alignItems: "center", 
+          justifyContent: "center", background: "transparent", border: "1px solid var(--border-color)", 
+          cursor: "pointer" 
+        }} className="hover-bg-slate" title="Notifications">
+          <i className="fa-regular fa-bell" style={{ fontSize: '1.25rem', color: '#475569' }}></i>
         </button>
+
         <button type="button" onClick={() => setSettingsOpen(true)}
-          style={{ width: 44, height: 44, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", cursor: "pointer" }}
+          style={{ 
+            width: 44, height: 44, borderRadius: "50%", display: "flex", alignItems: "center", 
+            justifyContent: "center", background: "transparent", border: "1px solid var(--border-color)", 
+            cursor: "pointer" 
+          }}
           className="hover-bg-slate"
+          title="Paramètres"
         >
-          <span className="material-symbols-outlined" style={{ color: "var(--text-muted)", fontSize: 22 }}>
-            settings
-          </span>
+          <i className="fa-solid fa-gear" style={{ fontSize: '1.25rem', color: '#475569' }}></i>
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div aria-hidden="true"

@@ -6,7 +6,7 @@ export const themeFromMe = (me) => {
   const groups = (me?.groups || [])
     .map((g) => (typeof g === "string" ? g : g.name))
     .filter(Boolean)
-    .map((s) => String(s).trim().toUpperCase()); // ✅ MAJUSCULE
+    .map((s) => String(s).trim().toUpperCase());
 
   if (me?.is_superuser) return "red";
   if (groups.includes("MEDECIN")) return "blue";
