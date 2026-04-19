@@ -7,8 +7,9 @@ import Header from "./Header";
 export default function AppLayout({ children }) {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
+  const isLandingPage = location.pathname === "/";
 
-  if (isLoginPage) {
+  if (isLoginPage || isLandingPage) {
     return <>{children}</>;
   }
 

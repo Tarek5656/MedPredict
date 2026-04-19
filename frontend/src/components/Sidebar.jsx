@@ -35,13 +35,17 @@ export default function Sidebar() {
       <div style={{ padding: "0 32px", marginBottom: 40 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ 
-            width: 40, height: 40, borderRadius: 12, background: "var(--primary)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "white"
+            width: 40, height: 40, borderRadius: 12, background: "#48B39B",
+            display: "flex", alignItems: "center", justifyContent: "center", color: "white",
+            boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)"
           }}>
-            <span className="material-symbols-outlined">health_and_safety</span>
+            <i className="fa-solid fa-heart-pulse" style={{ fontSize: "20px" }}></i>
           </div>
           <div>
-            <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0, color: "var(--text-main)", lineHeight: 1.2 }}>MedPredict</h2>
+            <h2 style={{ 
+              fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "#48B39B", 
+              lineHeight: 1.2, letterSpacing: "-0.025em" 
+            }}>MedPredict</h2>
             <p style={{ fontSize: "0.75rem", margin: 0, color: "var(--text-muted)", opacity: 0.8 }}>Premium Care</p>
           </div>
         </div>
@@ -58,7 +62,7 @@ export default function Sidebar() {
               color: isActive ? "white" : "var(--text-muted)",
               transition: "all 0.2s"
             }} className={!isActive ? "hover-bg-slate" : ""}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{item.icon}</span>
+              <i className={item.icon} style={{ fontSize: 18, width: 24, textAlign: 'center' }}></i>
               <span>{item.name}</span>
             </Link>
           );
@@ -67,19 +71,18 @@ export default function Sidebar() {
 
       <div style={{ marginTop: "auto", borderTop: "1px solid var(--border-color)", paddingTop: 24, paddingBottom: 0 }}>
         <button style={{ 
-          display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", margin: "4px 16px",
-          borderRadius: 9999, textDecoration: "none", fontSize: "0.875rem", fontWeight: 500,
-          backgroundColor: "transparent", color: "var(--text-muted)", border: "none", width: "calc(100% - 32px)", cursor: "pointer", textAlign: "left"
-        }} className="hover-bg-slate">
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>help_outline</span>
-          <span>Support</span>
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px", margin: "4px 16px",
+          borderRadius: 9999, textDecoration: "none", fontSize: "2rem", fontWeight: 500,
+          backgroundColor: "transparent", color: "#48B39B", border: "none", width: "calc(100% - 32px)", cursor: "pointer"
+        }} className="hover-bg-slate" title="Support">
+          <i className="fa-regular fa-comment-dots"></i>
         </button>
         <button onClick={handleLogout} style={{ 
           display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", margin: "4px 16px",
           borderRadius: 9999, textDecoration: "none", fontSize: "0.875rem", fontWeight: 500,
           backgroundColor: "transparent", color: "var(--text-muted)", border: "none", width: "calc(100% - 32px)", cursor: "pointer", textAlign: "left"
         }} className="hover-bg-slate">
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>logout</span>
+          <i className="fa-solid fa-right-from-bracket" style={{ fontSize: 18, width: 24, textAlign: 'center' }}></i>
           <span>Logout</span>
         </button>
       </div>

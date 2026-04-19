@@ -6,11 +6,11 @@ export function menuItems(me) {
 
   // menu “normal” (inchangé)
   const base = [
-    { name: "Overview", icon: "dashboard", path: "/overview" },
-    { name: "Calendrier", icon: "calendar_today", path: "/calendrier" },
-    { name: "Patients", icon: "group", path: "/patients" },
-    { name: "Rendez-vous", icon: "event_available", path: "/rendezvous" },
-    { name: "Analyses", icon: "analytics", path: "/analyses" },
+    { name: "Overview", icon: "fa-solid fa-chart-line", path: "/overview" },
+    { name: "Calendrier", icon: "fa-regular fa-calendar-days", path: "/calendrier" },
+    { name: "Patients", icon: "fa-solid fa-user-group", path: "/patients" },
+    { name: "Rendez-vous", icon: "fa-regular fa-calendar-check", path: "/rendezvous" },
+    { name: "Analyses", icon: "fa-solid fa-chart-simple", path: "/analyses" },
   ];
 
   // superuser / medecin : ne change rien
@@ -24,11 +24,11 @@ export function menuItems(me) {
   // patient : ton menu patient
   if (groups.includes("PATIENT")) {
     return [
-      { name: "Overview", icon: "dashboard", path: "/overview" },
-      { name: "Calendrier", icon: "calendar_today", path: "/calendrier" },
-      { name: "Profile", icon: "person", path: "/patient/infos" },
-      { name: "Rendez-vous", icon: "event_available", path: "/patient/rendezvous" },
-      { name: "Consultations", icon: "medical_information", path: "/patient/consultation" },
+      { name: "Overview", icon: "fa-solid fa-chart-line", path: "/overview" },
+      { name: "Calendrier", icon: "fa-regular fa-calendar-days", path: "/calendrier" },
+      { name: "Profile", icon: "fa-regular fa-user", path: "/patient/infos" },
+      { name: "Rendez-vous", icon: "fa-regular fa-calendar-check", path: "/patient/rendezvous" },
+      { name: "Consultations", icon: "fa-solid fa-file-waveform", path: "/patient/consultation" },
     ];
   }
 
