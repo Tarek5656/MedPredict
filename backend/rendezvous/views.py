@@ -15,6 +15,9 @@ from django.utils.dateparse import parse_date
 from django.utils import timezone
 from datetime import datetime, time
 
+from notifications.services import notify_group
+from notifications.models import Notification
+
 class IsSecretaireOrPatient(BasePermission):
     def has_permission(self, request, view):
         return IsSecretaire().has_permission(request, view) or IsPatient().has_permission(request, view)
@@ -131,3 +134,24 @@ class RendezVousViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         self._mark_termine_if_needed()
         return super().retrieve(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+            rdv = serializer.save()
+
+            # Détecter si l'auteur est un patient (groupe PATIENT)
+            groups = set(self.request.user.groups.values_list("name", flat=True))
+            created_by_patient = "PATIENT" in groups
+
+            if created_by_patient:
+                dt_local = timezone.localtime(rdv.date_heure)
+                title = "Nouveau rendez-vous ajouté"
+                body = f"{rdv.patient.nom} {rdv.patient.prenom} — {dt_local.strftime('%d/%m/%Y à %H:%M')}"
+                url = f"/patients/{rdv.patient_id}"   # adapte à ta route front
+
+                notify_group(
+                    "SECRETAIRE",
+                    type=Notification.Type.RDV_CREATED,
+                    title=title,
+                    body=body,
+                    url=url,
+                )

@@ -18,4 +18,5 @@ urlpatterns = [
     path("api/", include("rendezvous.urls")), 
     path("api/", include("consultations.urls")),
     path("api/", include("ai.urls")),
+    path("api/", include("notifications.urls")),
 ]
