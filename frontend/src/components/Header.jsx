@@ -3,6 +3,7 @@ import { useNavigate} from "react-router-dom";
 import userService from "../services/userService";
 import SlideDrawer from "../components/SlideDrawer";
 import Settings from "../components/Settings";
+import NotificationsTab from "./notification/NotificationsTab";
 import { Bell, Settings as SettingsIcon } from "lucide-react";
 
 export default function Header() {
@@ -70,13 +71,7 @@ export default function Header() {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-        <button style={{ 
-          width: 44, height: 44, borderRadius: "50%", display: "flex", alignItems: "center", 
-          justifyContent: "center", background: "transparent", border: "1px solid var(--border-color)", 
-          cursor: "pointer" 
-        }} className="hover-bg-slate" title="Notifications">
-          <i className="fa-regular fa-bell" style={{ fontSize: '1.25rem', color: '#475569' }}></i>
-        </button>
+        <NotificationsTab />
 
         <button type="button" onClick={() => setSettingsOpen(true)}
           style={{ 

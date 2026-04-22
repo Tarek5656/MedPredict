@@ -35,7 +35,7 @@ export default function Sidebar() {
       <div style={{ padding: "0 32px", marginBottom: 40 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ 
-            width: 40, height: 40, borderRadius: 12, background: "#48B39B",
+            width: 40, height: 40, borderRadius: 12, background: "var(--primary)",
             display: "flex", alignItems: "center", justifyContent: "center", color: "white",
             boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)"
           }}>
@@ -43,7 +43,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h2 style={{ 
-              fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "#48B39B", 
+              fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--primary)", 
               lineHeight: 1.2, letterSpacing: "-0.025em" 
             }}>MedPredict</h2>
             <p style={{ fontSize: "0.75rem", margin: 0, color: "var(--text-muted)", opacity: 0.8 }}>Premium Care</p>
@@ -73,7 +73,7 @@ export default function Sidebar() {
         <button style={{ 
           display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px", margin: "4px 16px",
           borderRadius: 9999, textDecoration: "none", fontSize: "2rem", fontWeight: 500,
-          backgroundColor: "transparent", color: "#48B39B", border: "none", width: "calc(100% - 32px)", cursor: "pointer"
+          backgroundColor: "transparent", color: "var(--primary)", border: "none", width: "calc(100% - 32px)", cursor: "pointer"
         }} className="hover-bg-slate" title="Support">
           <i className="fa-regular fa-comment-dots"></i>
         </button>

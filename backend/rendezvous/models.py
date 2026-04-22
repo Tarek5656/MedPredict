@@ -16,6 +16,9 @@ class RendezVous(models.Model):
     motif = models.CharField(max_length=255, blank=True, default="")
     statut = models.CharField(max_length=20, choices=Statut.choices, default="planifie")
 
+    rappel_24h_envoye = models.BooleanField(default=False)
+    notif_10min_envoyee = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

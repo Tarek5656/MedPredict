@@ -66,14 +66,14 @@ export default function Login() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
           <div style={{ 
-            backgroundColor: '#48B39B', width: 44, height: 44, borderRadius: '12px', 
+            backgroundColor: 'var(--primary)', width: 44, height: 44, borderRadius: '12px', 
             color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
           }}>
             <i className="fa-solid fa-heart-pulse" style={{ fontSize: '24px' }}></i>
           </div>
           <h1 style={{ 
-            color: '#48B39B', fontWeight: 700, fontSize: '2.25rem', 
+            color: 'var(--primary)', fontWeight: 700, fontSize: '2.25rem', 
             letterSpacing: '-0.025em', margin: 0 
           }}>
             MedPredict
