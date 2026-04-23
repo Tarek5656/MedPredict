@@ -182,12 +182,12 @@ export default function Calendrier() {
               <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 {selectedDay.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </h3>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--primary-light)', color: '#48B39B', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, marginTop: '4px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--primary-light)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, marginTop: '4px' }}>
                 {rdvOfSelectedDay.length} Rendez-vous
               </div>
             </div>
             <Link to={`/calendrier/jour?date=${toYMD(selectedDay)}`} 
-              style={{ fontSize: '0.875rem', color: '#48B39B', fontWeight: 600, textDecoration: 'none', background: 'var(--bg-color)', padding: '8px 16px', borderRadius: '999px' }}
+              style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', background: 'var(--bg-color)', padding: '8px 16px', borderRadius: '999px' }}
               className="hover-bg-slate"
             >
               Agenda
@@ -202,21 +202,20 @@ export default function Calendrier() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {rdvOfSelectedDay.map((r) => {
-                const isUrgent = r.statut_effectif === 'URGENT';
                 return (
                   <div key={r.id} style={{ 
                     position: 'relative', background: 'var(--bg-color)', borderRadius: 16, padding: '16px 20px',
-                    border: '1px solid var(--border-color)', borderLeft: `6px solid ${isUrgent ? '#ef4444' : '#48B39B'}`,
+                    border: '1px solid var(--border-color)', borderLeft: `6px solid var(--primary)`,
                     transition: 'transform 0.2s', cursor: 'pointer', overflow: 'hidden'
                   }} className="hover-shadow">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#48B39B", fontWeight: 800, fontSize: "1rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--primary)", fontWeight: 800, fontSize: "1rem" }}>
                         <i className="fa-regular fa-clock" style={{ fontSize: "1rem" }}></i>
                         {new Date(r.date_heure).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </div>
                       <div style={{ 
                         fontSize: '0.65rem', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', 
-                        background: isUrgent ? '#fee2e2' : 'white', color: isUrgent ? '#ef4444' : 'var(--text-muted)',
+                        background: '#fee2e2', color: 'var(--text-muted)',
                         textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid var(--border-color)'
                       }}>
                         {r.statut_effectif || 'STANDARD'}
@@ -224,7 +223,7 @@ export default function Calendrier() {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-main)', marginBottom: '4px' }}>
-                      <i className="fa-regular fa-user" style={{ fontSize: "1.1rem", color: '#48B39B' }}></i>
+                      <i className="fa-regular fa-user" style={{ fontSize: "1.1rem", color: 'var(--primary)' }}></i>
                       {r.patient_nom} {r.patient_prenom}
                     </div>
 
