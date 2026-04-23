@@ -238,10 +238,19 @@ export default function CalendrierJour() {
             className="card"
             style={{ width: "min(720px, 100%)", padding: 16 }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Nouveau rendez-vous</h3>
-              <button type="button" onClick={closeModal} style={{ marginLeft: "auto" }}>
-                ✕
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+              <h3 className="text-xl font-bold text-gray-800 m-0">Nouveau rendez-vous</h3>
+              <button 
+                type="button" 
+                onClick={closeModal} 
+                style={{ 
+                  marginLeft: "auto", background: "transparent", border: "none", cursor: "pointer",
+                  width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "var(--text-muted)"
+                }}
+                className="hover-bg-slate"
+              >
+                <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
 
