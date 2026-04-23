@@ -261,8 +261,7 @@ tr:hover td {
 }
 
 :root[data-theme="yellow"] .card-hero {
-  background: white;
-  color: #191c1e; /* Dark text for yellow theme for better contrast */
+  color: #191c1e; /* Keep dark text for yellow theme for better contrast */
 }
 
 .text-primary-light {

@@ -44,7 +44,6 @@ const Overview = () => {
   const groups = (me?.groups || []).map(g => String(typeof g === 'string' ? g : g.name).toUpperCase());
   const isDoctor = me?.is_superuser || groups.includes("MEDECIN");
   const isSecretary = groups.includes("SECRETAIRE");
-  const isPatient = groups.includes("PATIENT");
 
   return (
     <motion.div 
@@ -64,7 +63,6 @@ const Overview = () => {
 
       {isDoctor && <DoctorDashboard data={dashboardData} />}
       {isSecretary && <SecretaryDashboard data={dashboardData} />}
-      {isPatient && <PatientDashboard me={me} data={dashboardData} />}
     </motion.div>
   );
 };
@@ -219,82 +217,6 @@ const SecretaryDashboard = ({ data }) => {
   );
 };
 
-const PatientDashboard = ({ me, data }) => {
-  if (!data || data.role !== 'patient') return null;
-  const { nextVisit, healthJourney, activePrescriptions } = data;
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 space-y-8">
-        <div className="card card-hero p-8 overflow-hidden relative">
-          <div className="relative z-10">
-            <h2 className="text-2xl font-bold mb-2">My Next Visit</h2>
-            {nextVisit ? (
-              <>
-                <div className="text-5xl font-black mb-4">{nextVisit.day}</div>
-                <div className="flex items-center gap-4 text-primary-light">
-                  <div className="flex flex-col">
-                    <span className="text-xs opacity-80 uppercase tracking-tighter">Time</span>
-                    <span className="font-bold">{nextVisit.time}</span>
-                  </div>
-                  <div className="w-px h-8 bg-white/20"></div>
-                  <div className="flex flex-col">
-                    <span className="text-xs opacity-80 uppercase tracking-tighter">Doctor</span>
-                    <span className="font-bold">{nextVisit.doctor}</span>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-2xl mt-4 opacity-90">No upcoming appointments.</div>
-            )}
-          </div>
-        </div>
-
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-6">Health Journey</h3>
-          <div className="relative pl-8 border-l-2 border-gray-100 space-y-10">
-            {healthJourney.length === 0 ? (
-              <div className="text-gray-500">No medical history available yet.</div>
-            ) : (
-              healthJourney.map((step, idx) => (
-                <div key={idx} className="relative">
-                  <div className="absolute left-[-41px] top-0 w-4 h-4 rounded-full bg-primary border-4 border-white shadow-sm"></div>
-                  <div className="text-xs font-bold text-primary mb-1 uppercase">{step.date}</div>
-                  <div className="font-bold text-gray-900 mb-1">{step.title}</div>
-                  <p className="text-sm text-gray-500 leading-relaxed">{step.desc}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-8">
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-6">Active Prescriptions</h3>
-          <div className="space-y-4">
-            {activePrescriptions.length === 0 ? (
-              <div className="text-gray-500 text-sm">No active prescriptions.</div>
-            ) : (
-              activePrescriptions.map((pres, idx) => (
-                <div key={idx} className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-lg bg-white text-primary">
-                      <i className="fa-solid fa-pills"></i>
-                    </div>
-                    <div className="font-bold text-gray-900">{pres.med}</div>
-                  </div>
-                  <div className="text-sm text-gray-600 mb-1">{pres.dose}</div>
-                  <div className="text-xs font-semibold text-primary">{pres.duration}</div>
-                </div>
-              ))
-            )}
-          </div>
-          <button className="w-full mt-6 outline">View All Records</button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default Overview;

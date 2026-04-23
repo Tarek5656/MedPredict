@@ -92,7 +92,7 @@ export default function App() {
           <Route
             path="/overview"
             element={
-              <RoleRoute allowGroups={["MEDECIN", "SECRETAIRE", "PATIENT"]}>
+              <RoleRoute allowGroups={["MEDECIN", "SECRETAIRE"]}>
                 <Overview />
               </RoleRoute>
             }
