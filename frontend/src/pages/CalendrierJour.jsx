@@ -119,26 +119,46 @@ export default function CalendrierJour() {
   return (
     <>
       <div className="page-container animate-fade-in">
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <h2 style={{ margin: 0 }}>Agenda du jour</h2>
+        <div className="flex items-center gap-4 mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 m-0">Agenda du jour</h2>
 
-          <Link to="/calendrier" style={{ marginLeft: "auto" }}>
-          Retour Calendrier
-          </Link>
+          <div className="flex items-center gap-2 ml-auto">
+            <button className="outline" style={{ padding: '0.6rem' }} onClick={() => setDay(addDays(day, -1))}>
+              <i className="fa-solid fa-chevron-left"></i>
+            </button>
+            <div className="badge badge-success" style={{ padding: '0.8rem 1.5rem', fontSize: '1rem', fontWeight: 700 }}>
+              {day.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+            <button className="outline" style={{ padding: '0.6rem' }} onClick={() => setDay(addDays(day, 1))}>
+              <i className="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
 
-          <button onClick={() => setDay(addDays(day, -1))}>◀</button>
-          <div style={{ fontWeight: 800 }}>{day.toLocaleDateString()}</div>
-          <button onClick={() => setDay(addDays(day, 1))}>▶</button>
-
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-            <label style={{ opacity: 0.8 }}>Durée</label>
-            <select value={dureeMinutes} onChange={(e) => setDureeMinutes(Number(e.target.value))}>
-              <option value={15}>15 min</option>
-              <option value={30}>30 min</option>
-              <option value={45}>45 min</option>
-              <option value={60}>60 min</option>
-            </select>
-            <button onClick={load} disabled={loading}>Rafraîchir</button>
+          <div className="flex items-center gap-3 ml-4">
+            <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-xl border border-gray-200">
+              <label className="text-xs font-bold text-gray-500 uppercase ml-2">Durée</label>
+              <select 
+                value={dureeMinutes} 
+                onChange={(e) => setDureeMinutes(Number(e.target.value))}
+                className="bg-transparent border-none p-1 font-bold text-primary"
+                style={{ width: 'auto', minWidth: '80px' }}
+              >
+                <option value={15}>15 min</option>
+                <option value={30}>30 min</option>
+                <option value={45}>45 min</option>
+                <option value={60}>60 min</option>
+              </select>
+            </div>
+            
+            <button 
+              onClick={load} 
+              disabled={loading}
+              className="outline"
+              style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
+            >
+              <i className={`fa-solid fa-arrows-rotate ${loading ? "fa-spin" : ""}`}></i>
+              Rafraîchir
+            </button>
           </div>
         </div>
 
@@ -218,10 +238,19 @@ export default function CalendrierJour() {
             className="card"
             style={{ width: "min(720px, 100%)", padding: 16 }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Nouveau rendez-vous</h3>
-              <button type="button" onClick={closeModal} style={{ marginLeft: "auto" }}>
-                ✕
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+              <h3 className="text-xl font-bold text-gray-800 m-0">Nouveau rendez-vous</h3>
+              <button 
+                type="button" 
+                onClick={closeModal} 
+                style={{ 
+                  marginLeft: "auto", background: "transparent", border: "none", cursor: "pointer",
+                  width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "var(--text-muted)"
+                }}
+                className="hover-bg-slate"
+              >
+                <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
 

@@ -82,7 +82,7 @@ export default function Header() {
           className="hover-bg-slate"
           title="Paramètres"
         >
-          <i className="fa-solid fa-gear" style={{ fontSize: '1.25rem', color: '#475569' }}></i>
+          <i className="fa-solid fa-gear" style={{ fontSize: '1.25rem', color: 'var(--text-muted)' }}></i>
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div aria-hidden="true"

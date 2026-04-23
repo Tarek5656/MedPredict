@@ -201,19 +201,36 @@ export default function ConsultationsTab({ patientId, canEdit, patient }) {
   };
 
   return (
-    <div style={{ marginTop: 12, border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <h3 style={{ margin: 0 }}>Consultations</h3>
+    <div className="card border border-gray-100 shadow-sm mt-8">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold flex items-center gap-3 text-gray-800">
+          <i className="fa-solid fa-file-waveform text-primary"></i>
+          Consultations
+        </h2>
 
-        {canEdit ? (
-          <button type="button" onClick={() => setCreateOpen((v) => !v)}>
-            {createOpen ? "Réduire" : "Démarrer consultation"}
+        <div className="flex gap-3">
+          {canEdit ? (
+            <button 
+              type="button" 
+              onClick={() => setCreateOpen((v) => !v)}
+              className={createOpen ? "outline" : ""}
+              style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
+            >
+              <i className={`fa-solid ${createOpen ? "fa-minus" : "fa-plus"}`}></i>
+              {createOpen ? "Réduire" : "Démarrer consultation"}
+            </button>
+          ) : null}
+
+          <button 
+            onClick={load} 
+            disabled={loading}
+            className="outline"
+            style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
+          >
+            <i className={`fa-solid fa-arrows-rotate ${loading ? "fa-spin" : ""}`}></i>
+            Rafraîchir
           </button>
-        ) : null}
-
-        <button style={{ marginLeft: "auto" }} onClick={load} disabled={loading}>
-          Rafraîchir
-        </button>
+        </div>
       </div>
 
       {err && <p style={{ color: "crimson" }}>{err}</p>}
@@ -280,7 +297,10 @@ export default function ConsultationsTab({ patientId, canEdit, patient }) {
 
       <div style={{ marginTop: 10 }}>
         {consultations.length === 0 ? (
-          <p>— Aucune consultation —</p>
+          <div className="p-12 text-center text-gray-500 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+            <i className="fa-solid fa-folder-open text-3xl mb-3 opacity-20"></i>
+            <p className="font-medium text-gray-400">Aucune consultation enregistrée pour le moment.</p>
+          </div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             {consultations.map((c) => (

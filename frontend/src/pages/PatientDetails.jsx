@@ -19,7 +19,7 @@ export default function PatientDetail() {
   const isAdmin = isSuperuser || (me?.groups || []).includes("ADMIN");
 
   const canEditPatientRole = isAdmin || isSecretaire;
-  const canEditDossierRole = isAdmin || isSecretaire;
+  const canEditDossierRole = isAdmin || isSecretaire || isMedecin;
 
   // ---- Edit patient (secrétaire) ----
   const [editPatientMode, setEditPatientMode] = useState(false);
@@ -41,6 +41,7 @@ export default function PatientDetail() {
     antecedents_familiaux: "",
   });
 
+  const [activeTab, setActiveTab] = useState("consultations");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -105,7 +106,6 @@ export default function PatientDetail() {
     } catch (e) {
       if (e?.response?.status === 403) {
         setCanEditPatient(false);
-        setErr("Seule la secrétaire (ou admin) peut modifier les infos du patient.");
       } else {
         setErr(extractApiError(e));
       }
@@ -125,7 +125,6 @@ const saveDossier = async () => {
   } catch (e) {
     if (e?.response?.status === 403) {
       setCanEditDossier(false);
-      setErr("Seul le médecin peut modifier le dossier médical.");
     } else {
       setErr(extractApiError(e));
     }
@@ -143,21 +142,80 @@ const saveDossier = async () => {
     else navigate("/patients");
   };
 
+  const getAge = (dateString) => {
+    if (!dateString) return null;
+    const today = new Date();
+    const birthDate = new Date(dateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+    return age;
+  };
+
+  const getInitials = (nom, prenom) => {
+    const n = nom ? nom.charAt(0).toUpperCase() : "";
+    const p = prenom ? prenom.charAt(0).toUpperCase() : "";
+    return `${p}${n}`; // Usually Prenom then Nom for initials
+  };
+
+  const age = getAge(patient.date_naissance);
+
   return (
     <div className="page-container animate-fade-in">
-      <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 24 }}>
+      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 32 }}>
         <button
           type="button"
           onClick={goBack}
           className="outline"
-          style={{ padding: "8px 16px", fontSize: "0.9rem" }}
+          style={{ padding: "8px 16px", fontSize: "0.9rem", marginTop: 4 }}
         >
           ← Retour
         </button>
-        <h1 style={{ margin: 0, fontSize: "2rem", color: "var(--primary)", letterSpacing: "-0.02em" }}>
-          Patient #{patient.id} — {patient.nom} {patient.prenom}
-        </h1>
-        <button style={{ marginLeft: "auto" }} onClick={load} disabled={loading}>
+        
+        <div style={{ display: "flex", gap: 20, alignItems: "center", flex: 1, paddingLeft: 8 }}>
+          {/* Avatar Initials */}
+          <div style={{ 
+            width: 64, height: 64, borderRadius: "50%", 
+            background: "linear-gradient(135deg, var(--primary), var(--primary-hover))",
+            color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "1.75rem", fontWeight: 700, letterSpacing: "1px",
+            boxShadow: "var(--shadow-sm)"
+          }}>
+            {getInitials(patient.nom, patient.prenom)}
+          </div>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* Name and Badge Row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <h1 style={{ margin: 0, fontSize: "1.75rem", color: "var(--text-main)", letterSpacing: "-0.02em", fontWeight: 700 }}>
+                {patient.prenom} {patient.nom}
+              </h1>
+              <span style={{ 
+                background: "var(--primary-light)", color: "var(--primary)", 
+                padding: "4px 10px", borderRadius: 999, fontSize: "0.8rem", fontWeight: 700,
+                border: "1px solid rgba(0,0,0,0.05)"
+              }}>
+                #{patient.id}
+              </span>
+            </div>
+
+            {/* Demographic Subtitle */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.95rem", color: "var(--text-muted)", fontWeight: 500 }}>
+              {age !== null ? <span>{age} ans</span> : <span>Âge inconnu</span>}
+              <span style={{ color: "var(--border-color)" }}>•</span>
+              {patient.sexe ? <span>{patient.sexe === 'M' ? 'Homme' : 'Femme'}</span> : <span>Sexe non précisé</span>}
+              <span style={{ color: "var(--border-color)" }}>•</span>
+              {patient.groupe_sanguin ? (
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <i className="fa-solid fa-droplet" style={{ color: "var(--danger)", fontSize: "0.85rem" }}></i>
+                  {patient.groupe_sanguin}
+                </span>
+              ) : <span>Groupe sanguin inconnu</span>}
+            </div>
+          </div>
+        </div>
+
+        <button style={{ marginTop: 4 }} onClick={load} disabled={loading}>
           Rafraîchir
         </button>
       </div>
@@ -166,54 +224,60 @@ const saveDossier = async () => {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
         {/* Patient card */}
-        <div className="card">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h3 style={{ margin: 0 }}>Infos patient</h3>
+        <div className={editPatientMode ? "card" : "card card-hero p-8 overflow-hidden relative"}>
+          <div className="relative z-10">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: editPatientMode ? 0 : 24 }}>
+              <h2 className={editPatientMode ? "text-xl font-bold m-0" : "text-2xl font-bold m-0 flex items-center gap-3"}>
+                <i className="fa-solid fa-id-card"></i> Infos Patient
+              </h2>
 
-            {!editPatientMode && canEditPatientRole ? (
-              <button
-                style={{ marginLeft: "auto" }}
-                disabled={loading}
-                onClick={() => setEditPatientMode(true)}
-              >
-                Modifier ({isAdmin ? "Admin" : "Secrétaire"})
-              </button>
-            ) : null}
-          </div>
-
-          {!editPatientMode ? (
-            <>
-              <p><b>Téléphone:</b> {patient.telephone || ""}</p>
-              <p><b>Email:</b> {patient.email || ""}</p>
-              <p><b>Adresse:</b> {patient.adresse || ""}</p>
-              <p><b>Date naissance:</b> {patient.date_naissance || ""}</p>
-              <p><b>Sexe:</b> {patient.sexe || ""}</p>
-              <p><b>Groupe sanguin:</b> {patient.groupe_sanguin || ""}</p>
-
-              {!canEditPatientRole ? (
-                <p style={{ color: "#b45309", marginTop: 8 }}>
-                  Seule la secrétaire (ou admin) peut modifier les informations du patient.
-                </p>
+              {!editPatientMode && canEditPatientRole ? (
+                <button
+                  style={{ marginLeft: "auto", background: "white", color: "var(--primary)" }}
+                  disabled={loading}
+                  onClick={() => setEditPatientMode(true)}
+                >
+                  Modifier
+                </button>
               ) : null}
+            </div>
 
-              {/* garde aussi ton fallback backend 403 si tu veux */}
-              {canEditPatientRole && !canEditPatient ? (
-                <p style={{ color: "#b45309" }}>Tu n’as pas les droits pour modifier.</p>
-              ) : null}
-            </>
-          ) : (
-            <>
-              {/* Sécurité UI: si quelqu’un force le mode édition */}
-              {!canEditPatientRole ? (
-                <>
-                  <p style={{ color: "#b45309" }}>
-                    Seule la secrétaire (ou admin) peut modifier les informations du patient.
-                  </p>
+            {!editPatientMode ? (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="opacity-80 text-xs uppercase tracking-wider mb-1">Téléphone</p>
+                  <p className="font-semibold text-lg">{patient.telephone || "—"}</p>
+                </div>
+                <div>
+                  <p className="opacity-80 text-xs uppercase tracking-wider mb-1">Email</p>
+                  <p className="font-semibold text-lg truncate" title={patient.email}>{patient.email || "—"}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="opacity-80 text-xs uppercase tracking-wider mb-1">Adresse</p>
+                  <p className="font-semibold text-lg">{patient.adresse || "—"}</p>
+                </div>
+                <div>
+                  <p className="opacity-80 text-xs uppercase tracking-wider mb-1">Date Naissance</p>
+                  <p className="font-semibold text-lg">{patient.date_naissance || "—"}</p>
+                </div>
+                <div>
+                  <p className="opacity-80 text-xs uppercase tracking-wider mb-1">Sexe & Groupe</p>
+                  <p className="font-semibold text-lg">{patient.sexe || "—"} <span className="opacity-50 mx-1">•</span> {patient.groupe_sanguin || "—"}</p>
+                </div>
+
+                {/* Message de restriction supprimé */}
+
+                {/* garde aussi ton fallback backend 403 si tu veux */}
+                {/* Message de restriction backend supprimé */}
+              </div>
+            ) : (
+              <>
+                {/* Sécurité UI: si quelqu’un force le mode édition */}
+                {!canEditPatientRole ? (
                   <button type="button" onClick={() => setEditPatientMode(false)} disabled={loading}>
                     Fermer
                   </button>
-                </>
-              ) : (
+                ) : (
                 <>
                   <div>
                     <label>Téléphone</label>
@@ -312,49 +376,53 @@ const saveDossier = async () => {
               )}
             </>
           )}
+          </div>
         </div>
 
         {/* Dossier card */}
-        <div className="card">
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h3 style={{ margin: 0 }}>Dossier médical</h3>
-          </div>
+        <div className="card border-2 border-primary/10">
+          <h2 className="text-xl font-bold mb-6 text-primary flex items-center gap-3">
+            <i className="fa-solid fa-notes-medical"></i> Dossier Médical
+          </h2>
 
           {!editDossierMode ? (
-            <>
-              <p style={{ whiteSpace: "pre-wrap" }}>
-                <b>Antécédents médicaux:</b>{"\n"}
-                {dossier?.antecedents_medicaux || "—"}
-              </p>
-              <p style={{ whiteSpace: "pre-wrap" }}>
-                <b>Antécédents familiaux:</b>{"\n"}
-                {dossier?.antecedents_familiaux || "—"}
-              </p>
+            <div className="space-y-6">
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <i className="fa-solid fa-virus text-primary"></i> Antécédents Médicaux
+                </h3>
+                <p className="text-gray-600 whitespace-pre-wrap text-sm">
+                  {dossier?.antecedents_medicaux || "Aucun antécédent médical enregistré."}
+                </p>
+              </div>
+
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <i className="fa-solid fa-users text-primary"></i> Antécédents Familiaux
+                </h3>
+                <p className="text-gray-600 whitespace-pre-wrap text-sm">
+                  {dossier?.antecedents_familiaux || "Aucun antécédent familial enregistré."}
+                </p>
+              </div>
 
               {canEditDossierRole ? (
                 <button disabled={loading} onClick={() => setEditDossierMode(true)}>
-                  Modifier ({isAdmin ? "Admin" : "Secrétaire"})
+                  Modifier
                 </button>
               ) : null}
 
-              {!canEditDossierRole ? (
-                <p style={{ color: "#b45309", marginTop: 8 }}>
-                  Seul la secrétaire (ou admin) peut modifier le dossier médical.
-                </p>
-              ) : null}
+              {/* Message de restriction supprimé */}
 
               {/* garde aussi ton fallback backend 403 si tu veux */}
-              {canEditDossierRole && !canEditDossier ? (
-                <p style={{ color: "#b45309" }}>Tu n’as pas les droits pour modifier.</p>
-              ) : null}
-            </>
+              {/* Message de restriction backend supprimé */}
+            </div>
           ) : (
             <>
               {/* Sécurité UI: si quelqu’un force le mode édition */}
               {!canEditDossierRole ? (
                 <>
                   <p style={{ color: "#b45309" }}>
-                    Seul la secrétaire (ou admin) peut modifier le dossier médical.
+                    Vous ne pouvez pas modifier le dossier médical.
                   </p>
                   <button type="button" onClick={() => setEditDossierMode(false)} disabled={loading}>
                     Fermer
@@ -408,15 +476,56 @@ const saveDossier = async () => {
           )}
         </div>
       </div>
-      {(isAdmin || isMedecin) ? (
-        <ConsultationsTab
-          patientId={patient.id}
-          canEdit={isAdmin || isMedecin}
-          patient={patient}
-        />
-      ) : null}      
-      {/* ✅ RDV en dessous, pleine largeur */}
-      <RendezVousTab patientId={patient.id} canCreate={isSecretaire || isAdmin} />
+
+      {/* Premium Tabs Section */}
+      <div className="flex p-1.5 bg-gray-100/60 rounded-2xl mb-8 w-fit border border-gray-100 shadow-sm">
+        <button
+          onClick={() => setActiveTab("consultations")}
+          className={`flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+            activeTab === "consultations"
+              ? "bg-primary text-white shadow-lg transform scale-105"
+              : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
+          }`}
+          style={{ boxShadow: activeTab === "consultations" ? 'var(--shadow-md)' : 'none' }}
+        >
+          <i className="fa-solid fa-file-waveform"></i>
+          Consultations
+        </button>
+        <button
+          onClick={() => setActiveTab("rdv")}
+          className={`flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+            activeTab === "rdv"
+              ? "bg-primary text-white shadow-lg transform scale-105"
+              : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
+          }`}
+          style={{ boxShadow: activeTab === "rdv" ? 'var(--shadow-md)' : 'none' }}
+        >
+          <i className="fa-regular fa-calendar-check"></i>
+          Rendez-vous
+        </button>
+      </div>
+
+      <div className="relative">
+        <div style={{ display: activeTab === "consultations" ? "block" : "none" }} className="animate-fadeIn">
+          {isAdmin || isMedecin ? (
+            <ConsultationsTab
+              patientId={patient.id}
+              canEdit={isAdmin || isMedecin}
+              patient={patient}
+            />
+          ) : (
+            <div className="card p-12 text-center text-gray-500 bg-gray-50/50">
+              <i className="fa-solid fa-lock text-3xl mb-4 opacity-20"></i>
+              <p className="font-semibold text-lg">Accès Restreint</p>
+              <p className="text-sm">Seul le personnel médical peut consulter les dossiers cliniques.</p>
+            </div>
+          )}
+        </div>
+        
+        <div style={{ display: activeTab === "rdv" ? "block" : "none" }} className="animate-fadeIn">
+          <RendezVousTab patientId={patient.id} canCreate={isSecretaire || isAdmin} />
+        </div>
+      </div>
     </div>
   );
 }

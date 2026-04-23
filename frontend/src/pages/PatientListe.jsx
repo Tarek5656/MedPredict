@@ -94,35 +94,48 @@ export default function PatientsList() {
   return (
       <div className="page-container animate-fade-in">
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: "2rem", color: "var(--primary)", letterSpacing: "-0.02em" }}>Patients</h1>
-          <span style={{ opacity: 0.7 }}>Total: {count}</span>
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900">Patients</h1>
+          <span className="badge badge-success" style={{ padding: '0.4rem 1rem' }}>Total: {count}</span>
   
           {(isAdmin || isSecretaire) ? (
             <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-              <button onClick={() => setDrawerOpen(true)} style={{
-                background: "var(--primary)", color: "white", padding: "10px 24px", borderRadius: "9999px", fontWeight: 600, fontSize: "0.875rem", border: "none", cursor: "pointer"
-              }}>+ Nouveau patient</button>
+              <button onClick={() => setDrawerOpen(true)}>
+                <i className="fa-solid fa-plus"></i>
+                Nouveau patient
+              </button>
             </div>
           ) : null}
         </div>
   
-        {err && <p style={{ color: "crimson" }}>{err}</p>}
+        {err && <p className="badge badge-error w-full p-4 mb-4">{err}</p>}
   
         {/* ✅ Même style que la page RDV + bouton réinitialiser */}
-        <div className="card" style={{ marginBottom: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h3 style={{ marginTop: 0, marginBottom: 0 }}>Filtres</h3>
+        <div className="card shadow-sm border border-gray-100 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <i className="fa-solid fa-sliders text-primary"></i>
+              Filtres
+            </h3>
   
-            <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
-              <button onClick={load} disabled={loading}>
+            <div className="flex gap-3">
+              <button 
+                onClick={load} 
+                disabled={loading}
+                className="outline"
+                style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
+              >
+                <i className={`fa-solid fa-arrows-rotate ${loading ? "fa-spin" : ""}`}></i>
                 Rafraîchir
               </button>
               <button
                 type="button"
                 onClick={resetFilters}
                 disabled={loading}
+                className="outline"
+                style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
                 title="Réinitialiser les filtres"
               >
+                <i className="fa-solid fa-xmark"></i>
                 Réinitialiser
               </button>
             </div>

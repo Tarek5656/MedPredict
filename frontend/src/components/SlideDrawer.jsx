@@ -23,7 +23,7 @@ export default function SlideDrawer({ isOpen, onClose, title, children }) {
             background: "transparent", border: "none", cursor: "pointer", 
             width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)"
           }} className="hover-bg-slate">
-            <span className="material-symbols-outlined">close</span>
+            <i className="fa-solid fa-xmark" style={{ fontSize: '1.25rem' }}></i>
           </button>
         </div>
         <div style={{ flex: 1, overflowY: "auto", paddingRight: "8px" }}>

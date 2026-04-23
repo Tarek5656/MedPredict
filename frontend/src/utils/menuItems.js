@@ -24,9 +24,8 @@ export function menuItems(me) {
   // patient : ton menu patient
   if (groups.includes("PATIENT")) {
     return [
-      { name: "Overview", icon: "fa-solid fa-chart-line", path: "/overview" },
-      { name: "Calendrier", icon: "fa-regular fa-calendar-days", path: "/calendrier" },
       { name: "Profile", icon: "fa-regular fa-user", path: "/patient/infos" },
+      { name: "Calendrier", icon: "fa-regular fa-calendar-days", path: "/calendrier" },
       { name: "Rendez-vous", icon: "fa-regular fa-calendar-check", path: "/patient/rendezvous" },
       { name: "Consultations", icon: "fa-solid fa-file-waveform", path: "/patient/consultation" },
     ];

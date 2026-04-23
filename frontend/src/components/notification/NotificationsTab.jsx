@@ -100,10 +100,11 @@ export default function NotificationsTab() {
         style={{ 
           width: 44, height: 44, borderRadius: "50%", display: "flex", alignItems: "center", 
           justifyContent: "center", background: "transparent", border: "1px solid var(--border-color)", 
-          cursor: "pointer" 
+          cursor: "pointer",
+          boxShadow: "none"
         }}
         className="hover-bg-slate" title="Notifications">
-          <i className="fa-regular fa-bell" style={{ fontSize: '1.25rem', color: '#475569' }}></i>
+          <i className="fa-regular fa-bell" style={{ fontSize: '1.25rem', color: 'var(--text-muted)' }}></i>
 
         {unreadCount > 0 && (
             <span
@@ -115,15 +116,15 @@ export default function NotificationsTab() {
                 height: 18,
                 padding: "0 6px",
                 borderRadius: 999,
-                background: "#f43f5e", // rouge bien visible
+                background: "var(--danger)",
                 color: "#fff",
                 fontSize: 12,
                 fontWeight: 700,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                border: "2px solid #fff",
-                boxShadow: "0 0 3px #222"
+                border: "2px solid var(--card-bg)",
+                boxShadow: "var(--shadow-sm)"
             }}
             title={`${unreadCount} non lues`}
             >
@@ -137,29 +138,36 @@ export default function NotificationsTab() {
             style={{
             position: "absolute",
             right: 0,
-            top: 48,
+            top: 56,
             width: "min(380px, 95vw)",
             maxHeight: 420,
             overflow: "auto",
-            background: "rgba(16,24,40,0.98)",
-            border: "1px solid #334155",
-            borderRadius: 14,
-            boxShadow: "0 8px 32px rgba(0,0,0,.28)",
-            color: "#fff",
-            zIndex: 200
+            background: "var(--card-bg)",
+            border: "1px solid var(--border-color)",
+            borderRadius: "var(--radius)",
+            boxShadow: "var(--shadow-lg)",
+            color: "var(--text-main)",
+            zIndex: 200,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden"
             }}
         >
             <div
             style={{
-                padding: "12px 18px 10px 18px",
-                borderBottom: "1px solid #334155",
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border-color)",
                 display: "flex",
                 alignItems: "center",
-                gap: 10
+                gap: 10,
+                background: "var(--card-bg)",
+                position: "sticky",
+                top: 0,
+                zIndex: 10
             }}
             >
-            <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: ".01em" }}>Notifications</div>
-            <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: ".01em" }}>Notifications</div>
+            <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
                 <button
                 onClick={onMarkAllRead}
                 style={{
@@ -167,10 +175,12 @@ export default function NotificationsTab() {
                     background: "transparent",
                     border: "none",
                     cursor: "pointer",
-                    color: "#60a5fa",
-                    textDecoration: "underline",
-                    padding: 0
+                    color: "var(--primary)",
+                    fontWeight: 500,
+                    padding: 0,
+                    boxShadow: "none"
                 }}
+                className="hover-opacity"
                 >
                 Tout marquer lu
                 </button>
@@ -181,122 +191,127 @@ export default function NotificationsTab() {
                     background: "transparent",
                     border: "none",
                     cursor: "pointer",
-                    color: "#e2e8f0",
-                    textDecoration: "underline",
-                    padding: 0
+                    color: "var(--text-muted)",
+                    fontWeight: 500,
+                    padding: 0,
+                    boxShadow: "none"
                 }}
+                className="hover-opacity"
                 >
                 Fermer
                 </button>
             </div>
             </div>
 
-            {loading && (
-            <div style={{ padding: 16, color: "#cbd5e1" }}>Chargement...</div>
-            )}
-
-            {error && (
-            <div style={{ padding: 16, color: "#f87171" }}>Erreur: {error}</div>
-            )}
-
-            {!loading && !error && items.length === 0 && (
-            <div style={{ padding: 18, color: "#cbd5e1" }}>
-                Aucune notification.
-            </div>
-            )}
-
-            {!loading &&
-            !error &&
-            items.map((n) => (
-                <div
-                key={n.id}
-                style={{
-                    padding: "15px 18px 8px 18px",
-                    borderBottom: "1px solid #233",
-                    background: n.read
-                    ? "rgba(0,0,0,0.00)"
-                    : "linear-gradient(90deg, #2563eb11 0%, #0ea5e922 100%)"
-                }}
-                >
-                <div
-                    style={{
-                    fontWeight: 800,
-                    fontSize: 15,
-                    marginBottom: 2,
-                    color: "#fff"
-                    }}
-                >
-                    {n.title}
-                </div>
-
-                {!!n.body && (
-                    <div
-                    style={{
-                        fontSize: 13,
-                        color: "#cbd5e1",
-                        marginBottom: 2
-                    }}
-                    >
-                    {n.body}
-                    </div>
+            <div style={{ overflow: "auto", maxHeight: "360px" }}>
+                {loading && (
+                <div style={{ padding: 20, color: "var(--text-muted)", textAlign: "center", fontSize: 14 }}>Chargement...</div>
                 )}
 
-                <div
-                    style={{
-                    marginTop: 6,
-                    display: "flex",
-                    gap: 16,
-                    alignItems: "center"
-                    }}
-                >
-                    {n.url && (
-                    <button
-                        onClick={() => onOpenNotif(n)}
-                        style={{
-                        fontSize: 13,
-                        color: "#3b82f6",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                        padding: 0,
-                        textDecoration: "underline"
-                        }}
-                    >
-                        Ouvrir
-                    </button>
-                    )}
+                {error && (
+                <div style={{ padding: 20, color: "var(--danger)", textAlign: "center", fontSize: 14 }}>Erreur: {error}</div>
+                )}
 
-                    {!n.read && (
-                    <button
-                        onClick={() => onMarkRead(n.id)}
-                        style={{
-                        fontSize: 12,
-                        background: "transparent",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "#a5b4fc",
-                        opacity: 0.92,
-                        textDecoration: "underline"
-                        }}
-                    >
-                        Marquer comme lue
-                    </button>
-                    )}
+                {!loading && !error && items.length === 0 && (
+                <div style={{ padding: 30, color: "var(--text-muted)", textAlign: "center", fontSize: 14 }}>
+                    Aucune notification pour le moment.
+                </div>
+                )}
 
-                    <span
+                {!loading &&
+                !error &&
+                items.map((n) => (
+                    <div
+                    key={n.id}
                     style={{
-                        marginLeft: "auto",
-                        fontSize: 11,
-                        color: "#a5b4fc",
-                        opacity: 0.79
+                        padding: "16px 20px",
+                        borderBottom: "1px solid var(--border-color)",
+                        background: n.read
+                        ? "transparent"
+                        : "var(--bg-color)",
+                        transition: "background-color 0.2s"
                     }}
                     >
-                    {new Date(n.created_at).toLocaleString()}
-                    </span>
-                </div>
-                </div>
-            ))}
+                    <div
+                        style={{
+                        fontWeight: n.read ? 500 : 600,
+                        fontSize: 14,
+                        marginBottom: 4,
+                        color: "var(--text-main)"
+                        }}
+                    >
+                        {n.title}
+                    </div>
+
+                    {!!n.body && (
+                        <div
+                        style={{
+                            fontSize: 13,
+                            color: "var(--text-muted)",
+                            marginBottom: 8,
+                            lineHeight: 1.4
+                        }}
+                        >
+                        {n.body}
+                        </div>
+                    )}
+
+                    <div
+                        style={{
+                        marginTop: 8,
+                        display: "flex",
+                        gap: 16,
+                        alignItems: "center"
+                        }}
+                    >
+                        {n.url && (
+                        <button
+                            onClick={() => onOpenNotif(n)}
+                            style={{
+                            fontSize: 13,
+                            color: "var(--primary)",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            fontWeight: 600,
+                            padding: 0,
+                            boxShadow: "none"
+                            }}
+                        >
+                            Ouvrir
+                        </button>
+                        )}
+
+                        {!n.read && (
+                        <button
+                            onClick={() => onMarkRead(n.id)}
+                            style={{
+                            fontSize: 13,
+                            background: "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "var(--text-muted)",
+                            padding: 0,
+                            boxShadow: "none"
+                            }}
+                        >
+                            Marquer lue
+                        </button>
+                        )}
+
+                        <span
+                        style={{
+                            marginLeft: "auto",
+                            fontSize: 12,
+                            color: "var(--text-muted)",
+                        }}
+                        >
+                        {new Date(n.created_at).toLocaleDateString()} {new Date(n.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                    </div>
+                    </div>
+                ))}
+            </div>
         </div>
         )}
     </div>

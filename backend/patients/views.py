@@ -84,21 +84,29 @@ class PatientViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="me")
     def me(self, request):
-        patient = Patient.objects.get(user=request.user)
-        serializer = self.get_serializer(patient)
-        return Response(serializer.data)
+        try:
+            patient = Patient.objects.get(user=request.user)
+            serializer = self.get_serializer(patient)
+            return Response(serializer.data)
+        except Patient.DoesNotExist:
+            return Response({"detail": "Aucun profil patient n'est associé à cet utilisateur."}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=False, methods=["get"], url_path="me/dossier-medical")
     def me_dossier_medical(self, request):
-        patient = Patient.objects.get(user=request.user)
-        dm = patient.dossier_medical  # selon ton related_name
-        return Response(DossierMedicalSerializer(dm).data)
+        try:
+            patient = Patient.objects.get(user=request.user)
+            dm = patient.dossier_medical  # selon ton related_name
+            return Response(DossierMedicalSerializer(dm).data)
+        except Patient.DoesNotExist:
+            return Response({"detail": "Aucun profil patient n'est associé à cet utilisateur."}, status=status.HTTP_404_NOT_FOUND)
+        except getattr(Patient, 'dossier_medical').RelatedObjectDoesNotExist if hasattr(Patient, 'dossier_medical') else Exception:
+            return Response({"detail": "Dossier médical non trouvé."}, status=status.HTTP_404_NOT_FOUND)
 
     def get_permissions(self):
         # Permissions spécifiques à l'action dossier-medical
         if getattr(self, "action", None) == "dossier_medical":
             if self.request.method == "PATCH":
-                return [IsAuthenticated(), IsSecretaire()]
+                return [IsAuthenticated(), IsSecretaire() | IsMedecin()]
             return [IsAuthenticated()]
 
         # CRUD Patient => secrétaire (ou admin via IsSecretaire)

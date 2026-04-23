@@ -90,28 +90,39 @@ export default function RendezVousTab({ patientId, canCreate }) {
   };
 
   return (
-    <div style={{ marginTop: 12, border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <h3 style={{ margin: 0 }}>Rendez-vous</h3>
+    <div className="card border border-gray-100 shadow-sm mt-8">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold flex items-center gap-3 text-gray-800">
+          <i className="fa-regular fa-calendar-check text-primary"></i>
+          Rendez-vous
+        </h2>
 
-        {canCreate ? (
-          <button type="button" onClick={() => setFormExpanded((v) => !v)}>
-            {formExpanded ? "Réduire" : "Nouveau RDV"}
+        <div className="flex gap-3">
+          {canCreate ? (
+            <button 
+              type="button" 
+              onClick={() => setFormExpanded((v) => !v)}
+              className={formExpanded ? "outline" : ""}
+              style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
+            >
+              <i className={`fa-solid ${formExpanded ? "fa-minus" : "fa-plus"}`}></i>
+              {formExpanded ? "Réduire" : "Nouveau RDV"}
+            </button>
+          ) : null}
+
+          <button 
+            onClick={load} 
+            disabled={loading}
+            className="outline"
+            style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
+          >
+            <i className={`fa-solid fa-arrows-rotate ${loading ? "fa-spin" : ""}`}></i>
+            Rafraîchir
           </button>
-        ) : null}
-
-        <button style={{ marginLeft: "auto" }} onClick={load} disabled={loading}>
-          Rafraîchir
-        </button>
+        </div>
       </div>
 
       {err && <p style={{ color: "crimson" }}>{err}</p>}
-
-      {!canCreate ? (
-        <p style={{ opacity: 0.7, marginTop: 6 }}>
-          Tu n’as pas les droits pour créer/modifier les rendez-vous.
-        </p>
-      ) : null}
 
       {/* ✅ Formulaire repliable */}
       {canCreate && formExpanded ? (
@@ -163,60 +174,57 @@ export default function RendezVousTab({ patientId, canCreate }) {
 
       <div style={{ marginTop: 10 }}>
         {items.length === 0 ? (
-          <p>— Aucun rendez-vous —</p>
+          <div className="p-12 text-center text-gray-500 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+            <i className="fa-regular fa-calendar-times text-3xl mb-3 opacity-20"></i>
+            <p className="font-medium text-gray-400">Aucun rendez-vous planifié pour ce patient.</p>
+          </div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: 8 }}>
-                  Id
-                </th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: 8 }}>
-                  Date
-                </th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: 8 }}>
-                  Statut
-                </th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: 8 }}>
-                  Motif
-                </th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb", padding: 8 }}>
-                  Actions
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {items.map((rdv) => (
-                <tr key={rdv.id}>
-                  <td style={{ borderBottom: "1px solid #f3f4f6", padding: 8 }}>
-                    {rdv.id || "—"}
-                  </td>
-
-                  <td style={{ borderBottom: "1px solid #f3f4f6", padding: 8 }}>
-                    {new Date(rdv.date_heure).toLocaleString()}
-                  </td>
-
-                  <td style={{ borderBottom: "1px solid #f3f4f6", padding: 8 }}>
-                    {rdv.statut_effectif || rdv.statut}
-                  </td>
-
-                  <td style={{ borderBottom: "1px solid #f3f4f6", padding: 8 }}>
-                    {rdv.motif || "—"}
-                  </td>
-
-                  <td style={{ borderBottom: "1px solid #f3f4f6", padding: 8 }}>
-                    {canCreate && (rdv.statut_effectif || rdv.statut) === "planifie" ? (
-                      <button onClick={() => cancelRdv(rdv.id)}>Annuler</button>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date & Heure</th>
+                  <th>Statut</th>
+                  <th>Motif</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {items.map((rdv) => (
+                  <tr key={rdv.id}>
+                    <td>#{rdv.id}</td>
+                    <td>{new Date(rdv.date_heure).toLocaleString()}</td>
+                    <td>
+                      <span className={`badge ${
+                        (rdv.statut_effectif || rdv.statut) === 'effectue' ? 'badge-success' : 
+                        (rdv.statut_effectif || rdv.statut) === 'annule' ? 'badge-error' : 'badge-warning'
+                      }`}>
+                        {rdv.statut_effectif || rdv.statut}
+                      </span>
+                    </td>
+                    <td>{rdv.motif || "—"}</td>
+                    <td>
+                      {canCreate && (rdv.statut_effectif || rdv.statut) === "planifie" ? (
+                        <button 
+                          className="danger" 
+                          style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}
+                          onClick={() => cancelRdv(rdv.id)}
+                        >
+                          Annuler
+                        </button>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
+
       </div>
     </div>
   );
