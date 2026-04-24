@@ -198,7 +198,7 @@ export default function RendezVousTab({ patientId, canCreate }) {
                     <td>{new Date(rdv.date_heure).toLocaleString()}</td>
                     <td>
                       <span className={`badge ${
-                        (rdv.statut_effectif || rdv.statut) === 'effectue' ? 'badge-success' : 
+                        (rdv.statut_effectif || rdv.statut) === 'termine' ? 'badge-success' : 
                         (rdv.statut_effectif || rdv.statut) === 'annule' ? 'badge-error' : 'badge-warning'
                       }`}>
                         {rdv.statut_effectif || rdv.statut}

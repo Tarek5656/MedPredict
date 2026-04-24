@@ -72,15 +72,6 @@ export default function Infos() {
   return (
     <div className="page-container animate-fade-in">
       <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 32 }}>
-        <button
-          type="button"
-          onClick={goBack}
-          className="outline"
-          style={{ padding: "8px 16px", fontSize: "0.9rem", marginTop: 4 }}
-        >
-          ← Retour
-        </button>
-
         <div style={{ display: "flex", gap: 20, alignItems: "center", flex: 1, paddingLeft: 8 }}>
           {/* Avatar Initials */}
           <div style={{ 

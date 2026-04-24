@@ -5,6 +5,7 @@ class Notification(models.Model):
     class Type(models.TextChoices):
         RDV_REMINDER_10MIN = "RDV_REMINDER_10MIN"
         RDV_CREATED = "RDV_CREATED"
+        RDV_CANCEL = "RDV_CANCEL"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
     type = models.CharField(max_length=64, choices=Type.choices)
