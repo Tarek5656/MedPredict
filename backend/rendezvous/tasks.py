@@ -86,8 +86,8 @@ def send_rdv_notifications_10min(self):
                     continue
 
                 dt_local = timezone.localtime(locked.date_heure)
-                title = "Rendez-vous dans 10 minutes"
-                body = f"Patient: {locked.patient.nom} — {dt_local.strftime('%d/%m/%Y à %H:%M')}"
+                title = "Rendez-vous dans 15 minutes"
+                body = f"Patient: {locked.patient.nom} {locked.patient.prenom} — {dt_local.strftime('%d/%m/%Y à %H:%M')}"
                 url = f"/patients/{locked.patient_id}"  # adapte à ta route front
 
                 notify_group(

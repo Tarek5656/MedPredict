@@ -29,7 +29,7 @@ export default function Login() {
       const meRes = await userService.me();
       const me = meRes.data;
 
-      const groups = (me.groups || []).map((g) => (typeof g === "string" ? g : g.name)).map((s) => s.toLowerCase());
+      const groups = (me.groups || []).map((g) => (typeof g === "string" ? g : g.name)).map((s) => s.toUpperCase());
       const isSuper = !!me.is_superuser;
 
       const theme = themeFromMe(me);
@@ -40,12 +40,12 @@ export default function Login() {
       // ✅ routes selon rôle
       if (isSuper) {
         navigate("/admin", { replace: true });
-      } else if (groups.includes("MEDECIN")) {
-        navigate("/patients", { replace: true });
-      } else if (groups.includes("SECRETAIRE")) {
-        navigate("/rendezvous", { replace: true });
+      } else if (groups.includes("MEDECIN") || groups.includes("SECRETAIRE")) {
+        navigate("/overview", { replace: true });
+      } else if (groups.includes("PATIENT")) {
+        navigate("/patient/infos", { replace: true });
       } else {
-        navigate("/patients", { replace: true }); // fallback
+        navigate("/", { replace: true }); // fallback
       }
     } catch (error) {
       const status = error?.response?.status;

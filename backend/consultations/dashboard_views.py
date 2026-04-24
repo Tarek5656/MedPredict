@@ -69,10 +69,10 @@ class DashboardStatsAPIView(APIView):
             
             data['chartData'] = [{'name': k, 'patients': v} for k, v in chart_data.items()]
             
-            today_rdvs = RendezVous.objects.filter(date_heure__gte=today_start, date_heure__lt=today_end).order_by('date_heure')
+            today_rdvs = RendezVous.objects.filter(date_heure__gte=today_start, date_heure__lt=today_end).exclude(statut='annule').order_by('date_heure')
             data['todaySchedule'] = [
                 {
-                    'time': r.date_heure.strftime('%I:%M %p'),
+                    'time': timezone.localtime(r.date_heure).strftime('%H:%M %p'),
                     'patient': f"{r.patient.prenom} {r.patient.nom}",
                     'reason': r.motif or "Consultation"
                 } for r in today_rdvs
@@ -102,7 +102,7 @@ class DashboardStatsAPIView(APIView):
             data['checkInQueue'] = [
                 {
                     'name': f"{r.patient.prenom} {r.patient.nom}",
-                    'time': r.date_heure.strftime('%I:%M %p'),
+                    'time': timezone.localtime(r.date_heure).strftime('%H:%M %p'),
                     'status': 'Waiting'
                 } for r in pending_rdvs
             ]
@@ -113,7 +113,7 @@ class DashboardStatsAPIView(APIView):
             if next_rdv:
                 data['nextVisit'] = {
                     'day': 'Today' if next_rdv.date_heure.date() == now.date() else next_rdv.date_heure.strftime('%b %d'),
-                    'time': next_rdv.date_heure.strftime('%I:%M %p'),
+                    'time': timezone.localtime(next_rdv.date_heure).strftime('%H:%M %p'),
                     'doctor': "Clinic Doctor"
                 }
             else:
@@ -123,7 +123,7 @@ class DashboardStatsAPIView(APIView):
             data['healthJourney'] = [
                 {
                     'title': "Consultation",
-                    'date': c.date.strftime('%B %d, %Y'),
+                    'date': timezone.localtime(c.date).strftime('%B %d, %Y'),
                     'desc': c.observations or "Regular checkup."
                 } for c in past_consultations
             ]

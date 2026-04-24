@@ -215,7 +215,8 @@ export default function Calendrier() {
                       </div>
                       <div style={{ 
                         fontSize: '0.65rem', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', 
-                        background: '#fee2e2', color: 'var(--text-muted)',
+                        background: r.statut_effectif === "planifie" ? '#fef08a' : r.statut_effectif === "termine" ? '#bbf7d0' : '#fee2e2',
+                        color: r.statut_effectif === "planifie" || r.statut_effectif === "termine" ? '#222' : 'var(--text-muted)',
                         textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid var(--border-color)'
                       }}>
                         {r.statut_effectif || 'STANDARD'}

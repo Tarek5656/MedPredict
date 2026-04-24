@@ -96,6 +96,22 @@ class RendezVousViewSet(viewsets.ModelViewSet):
         rdv = self.get_object()
         rdv.statut = "annule"
         rdv.save(update_fields=["statut", "updated_at"])
+        
+        user = self.request.user
+        groups = set(user.groups.values_list("name", flat=True))
+
+        if "PATIENT" in groups:
+            title = "Rendez-vous annulé"
+            body = f"{rdv.patient.nom} {rdv.patient.prenom} — {timezone.localtime(rdv.date_heure).strftime('%d/%m/%Y à %H:%M')}"
+            url = f"/patients/{rdv.patient_id}"
+            notify_group(
+                "SECRETAIRE",
+                type=Notification.Type.RDV_CANCEL,
+                title=title,
+                body=body,
+                url=url,
+            )
+
         return Response(self.get_serializer(rdv).data, status=status.HTTP_200_OK)
 
     def get_permissions(self):
