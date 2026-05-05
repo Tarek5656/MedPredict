@@ -1,156 +1,117 @@
-import React, { useEffect, useMemo, useState } from "react";
-import consultationService from "../../services/consultationService";
-import { extractApiError } from "../../utils/format";
+import React, { useState, useEffect } from "react";
+import api from "../../services/api";
+import "./AIStyles.css";
 
-function normalizeToken(s) {
-  return (s || "")
-    .toLowerCase()
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9_ ]/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/ /g, "_");
-}
-
-function splitUserSymptoms(text) {
-  return (text || "")
-    .split(/[,;\n\r]+/g)
-    .map((x) => x.trim())
-    .filter(Boolean);
-}
-
-export default function AISuggestionsTab({ symptomsText = "", onApplyBest }) {
-  const [features, setFeatures] = useState([]);
-  const [loadingFeatures, setLoadingFeatures] = useState(false);
-
-  const [predicting, setPredicting] = useState(false);
-  const [err, setErr] = useState(null);
-  const [result, setResult] = useState(null);
+export default function AISuggestionsTab({ symptomsText, patient }) {
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadFeatures = async () => {
-      setLoadingFeatures(true);
-      setErr(null);
-      try {
-        const res = await consultationService.aiFeatures();
-        setFeatures(res.data?.features || []);
-      } catch (e) {
-        setErr(extractApiError(e) || "Impossible de charger la liste des symptômes IA.");
-      } finally {
-        setLoadingFeatures(false);
+    const timer = setTimeout(() => {
+      if (symptomsText && symptomsText.trim().length > 2) {
+        runAnalysis();
+      } else {
+        setResults(null);
       }
-    };
-    loadFeatures();
-  }, []);
+    }, 600); // Debounce pour éviter trop de requêtes
+    return () => clearTimeout(timer);
+  }, [symptomsText]);
 
-  // ... garde normalizeToken / splitUserSymptoms identiques
-
-  // Remplace ton featureSet par ceci
-  const featureMap = useMemo(() => {
-    const m = new Map();
-    for (const f of features || []) {
-      const k = normalizeToken(f);
-      if (k && !m.has(k)) m.set(k, f); // garde la 1ère forme originale
+  const runAnalysis = () => {
+    setLoading(true);
+    setError("");
+    
+    const symptomsList = symptomsText.split(",").map(s => s.trim()).filter(s => s);
+    
+    // Calcul de l'âge
+    let age = 35;
+    if (patient?.date_naissance) {
+      age = new Date().getFullYear() - new Date(patient.date_naissance).getFullYear();
     }
-    return m;
-  }, [features]);
+    const gender = patient?.sexe === "M" ? "M" : "F";
 
-  const featureSet = useMemo(() => new Set(featureMap.keys()), [featureMap]);
-
-  // Remplace le parsed par ceci (affiche en "original")
-  const parsed = useMemo(() => {
-    const raw = splitUserSymptoms(symptomsText);
-    const normalized = raw.map(normalizeToken).filter(Boolean);
-
-    const recognizedTokens = [];
-    const unknown = [];
-
-    for (let i = 0; i < normalized.length; i++) {
-      const token = normalized[i];
-      if (featureSet.has(token)) recognizedTokens.push(token);
-      else unknown.push(raw[i]);
-    }
-
-    const recognizedUniqueTokens = Array.from(new Set(recognizedTokens));
-    const recognizedDisplay = recognizedUniqueTokens.map((t) => featureMap.get(t) || t);
-
-    return { recognizedTokens: recognizedUniqueTokens, recognizedDisplay, unknown };
-  }, [symptomsText, featureSet, featureMap]);
-
-  const predict = async () => {
-    setErr(null);
-    setResult(null);
-
-    if (loadingFeatures) return setErr("Chargement des symptômes IA en cours...");
-    if (features.length === 0) return setErr("Aucune feature chargée (service IA indisponible ?).");
-    if (parsed.recognizedDisplay.length === 0)
-      return setErr("Aucun symptôme reconnu. Exemple attendu: skin_rash, itching, headache...");
-
-    setPredicting(true);
-    try {
-  const res = await consultationService.aiPredict({ symptoms: parsed.recognizedDisplay, top_k: 5, });   
-  setResult(res.data);
-    } catch (e) {
-      setErr(extractApiError(e) || "Erreur de prédiction IA.");
-    } finally {
-      setPredicting(false);
-    }
+    api.post("/consultations/ai-predict/", {
+      symptoms: symptomsList,
+      age: age,
+      gender: gender
+    })
+    .then((res) => {
+      setResults(res.data);
+      setLoading(false);
+    })
+    .catch((err) => {
+      console.error("AI Error:", err);
+      setError("Le service d'analyse est indisponible.");
+      setLoading(false);
+    });
   };
 
   return (
-    <div style={{ marginTop: 12, border: "1px solid #e5e7eb", borderRadius: 10, padding: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <h4 style={{ margin: 0 }}>IA — Analyse symptômes</h4>
-        <span style={{ opacity: 0.7 }}>
-          {loadingFeatures ? "Chargement..." : `${features.length} symptômes connus`}
-        </span>
+    <div style={{ height: "100%" }}>
+      <h3 style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+        Résultats
+      </h3>
 
-        <button style={{ marginLeft: "auto" }} type="button" onClick={predict} disabled={predicting}>
-          {predicting ? "Analyse..." : "Analyser"}
-        </button>
-      </div>
+      {loading && (
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <i className="fas fa-spinner fa-spin" style={{ fontSize: "1.5rem", color: "var(--primary)", marginBottom: 12 }}></i>
+          <p style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>Analyse en cours...</p>
+        </div>
+      )}
 
-      {err ? <p style={{ color: "crimson" }}>{err}</p> : null}
+      {error && (
+        <div style={{ padding: 16, backgroundColor: "#fff5f5", color: "#c53030", borderRadius: 12, fontSize: "0.9rem" }}>
+          <i className="fas fa-exclamation-circle" style={{ marginRight: 8 }}></i>
+          {error}
+        </div>
+      )}
 
-      <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div>
-          <b>Reconnus ({parsed.recognizedDisplay.length})</b>
-          <div style={{ marginTop: 6, opacity: 0.9 }}>
-            {parsed.recognizedDisplay.length === 0 ? "—" : parsed.recognizedDisplay.join(", ")}
+      {results && !loading && (
+        <div className="animate-fade-in">
+          {results.unknown_symptoms?.length > 0 && (
+            <div style={{ marginBottom: 20, padding: 12, backgroundColor: "#fef2f2", borderRadius: 8, border: "1px solid #fee2e2" }}>
+              <p style={{ fontSize: "0.8rem", color: "#991b1b", fontWeight: 600, marginBottom: 4 }}>Inconnus :</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {results.unknown_symptoms.map(s => (
+                  <span key={s} style={{ fontSize: "0.75rem", color: "#991b1b", backgroundColor: "#fff", padding: "1px 6px", borderRadius: 4, border: "1px solid #fecaca" }}>{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {results.suggestions?.map((item, index) => {
+              const probPercent = Math.round(item.probability * 100);
+              return (
+                <div key={index} style={{ paddingBottom: 12, borderBottom: "1px solid #f1f5f9" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{item.disease}</span>
+                    <span style={{ fontWeight: 700, color: "var(--primary)", fontSize: "0.95rem" }}>{probPercent}%</span>
+                  </div>
+                  <div style={{ height: 6, backgroundColor: "#f1f5f9", borderRadius: 10, overflow: "hidden" }}>
+                    <div 
+                      style={{ 
+                        width: `${probPercent}%`, 
+                        height: "100%", 
+                        backgroundColor: "var(--primary)",
+                        transition: "width 0.5s ease-out"
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
+      )}
 
-        <div>
-          <b>Inconnus ({parsed.unknown.length})</b>
-          <div style={{ marginTop: 6, opacity: 0.9 }}>
-            {parsed.unknown.length === 0 ? "—" : parsed.unknown.join(", ")}
-          </div>
+      {!loading && !results && !error && (
+        <div style={{ textAlign: "center", padding: "60px 0", opacity: 0.5 }}>
+          <i className="fas fa-wave-square" style={{ fontSize: "2rem", marginBottom: 12 }}></i>
+          <p style={{ fontSize: "0.9rem" }}>En attente de symptômes...</p>
         </div>
-      </div>
-
-      {result?.suggestions?.length ? (
-        <div style={{ marginTop: 12, borderTop: "1px solid #e5e7eb", paddingTop: 10 }}>
-          <b>Suggestions</b>
-          <ul style={{ marginTop: 8 }}>
-            {result.suggestions.map((s) => (
-              <li key={s.disease}>
-                {s.disease} — <b>{Math.round(s.probability * 100)}%</b>
-              </li>
-            ))}
-          </ul>
-
-          {onApplyBest ? (
-            <button
-              type="button"
-              onClick={() => onApplyBest(result.suggestions[0]?.disease || "")}
-              disabled={!result.suggestions[0]?.disease}
-            >
-              Utiliser la meilleure suggestion
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+      )}
     </div>
   );
 }

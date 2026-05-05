@@ -263,6 +263,7 @@ export default function ConsultationsTab({ patientId, canEdit, patient }) {
 
           <ConsultationFields
             canEdit={canEdit}
+            patient={patient}
             symptomes={createForm.symptomes}
             onChangeSymptomes={(v) => setCreateForm((s) => ({ ...s, symptomes: v }))}
             symptomCodes={createSymptomCodes}
@@ -323,6 +324,7 @@ export default function ConsultationsTab({ patientId, canEdit, patient }) {
 
                       <ConsultationFields
                         canEdit={canEdit}
+                        patient={patient}
                         symptomes={editDrafts[c.id]?.symptomes ?? c.symptomes ?? ""}
                         onChangeSymptomes={(v) =>
                           setEditDrafts((s) => ({
