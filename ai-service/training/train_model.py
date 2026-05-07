@@ -16,9 +16,10 @@ import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
 from sklearn.metrics import f1_score
 from sklearn.ensemble import HistGradientBoostingClassifier
 
@@ -82,11 +83,18 @@ def main():
 
     X = df[feature_cols]
     
-    # ✅ Remplacer les valeurs manquantes
+    # ✅ DATA AUGMENTATION: Masquer intentionnellement age/sexe sur 30% des données
+    # Cela force le modèle à apprendre à prédire de façon précise UNIQUEMENT avec les symptômes.
+    np.random.seed(42)
+    
     if "age" in X.columns:
-        X["age"] = X["age"].fillna(X["age"].median())
+        mask_age = np.random.rand(len(X)) < 0.3
+        X.loc[mask_age, "age"] = np.nan
+        
     if "gender" in X.columns:
-        X["gender"] = X["gender"].fillna("M") # par défaut
+        mask_gender = np.random.rand(len(X)) < 0.3
+        X.loc[mask_gender, "gender"] = "Unknown"
+        X["gender"] = X["gender"].fillna("Unknown")
         
     # Les symptômes manquants deviennent 0
     X[symptom_cols] = X[symptom_cols].fillna(0).astype(np.int8)
@@ -99,9 +107,17 @@ def main():
     # Preprocessor pour ColumnTransformer
     transformers = []
     if num_cols:
-        transformers.append(("num", StandardScaler(), num_cols))
+        num_pipeline = make_pipeline(
+            SimpleImputer(strategy="median", add_indicator=True),
+            StandardScaler()
+        )
+        transformers.append(("num", num_pipeline, num_cols))
     if cat_cols:
-        transformers.append(("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=False), cat_cols))
+        cat_pipeline = make_pipeline(
+            SimpleImputer(strategy="constant", fill_value="Unknown"),
+            OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        )
+        transformers.append(("cat", cat_pipeline, cat_cols))
     if symptom_cols:
         transformers.append(("symptoms", "passthrough", symptom_cols))
         

@@ -124,7 +124,7 @@ class DashboardStatsAPIView(APIView):
                 {
                     'title': "Consultation",
                     'date': timezone.localtime(c.date).strftime('%B %d, %Y'),
-                    'desc': c.observations or "Regular checkup."
+                    'desc': c.diagnostic or c.notes_cliniques or "Regular checkup."
                 } for c in past_consultations
             ]
             
@@ -133,9 +133,9 @@ class DashboardStatsAPIView(APIView):
                 if hasattr(c, 'ordonnance'):
                     for ligne in c.ordonnance.lignes.all():
                         active_prescriptions.append({
-                            'med': ligne.medicament,
-                            'dose': ligne.posologie,
-                            'duration': ligne.duree
+                            'med': ligne.nom,
+                            'dose': ligne.dosage,
+                            'duration': f"{ligne.duree_jours} jours" if ligne.duree_jours else "N/A"
                         })
             data['activePrescriptions'] = active_prescriptions
 

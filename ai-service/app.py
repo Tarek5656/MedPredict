@@ -44,15 +44,17 @@ def build_df(symptoms, age=None, gender=None):
         else:
             unknown.append(s_raw)
 
+    import numpy as np
+    
     if "age" in FEATURE_COLS:
         try:
-            row_data["age"] = float(age) if age is not None else 45.0
+            row_data["age"] = float(age) if age is not None and str(age).strip() != "" else np.nan
         except ValueError:
-            row_data["age"] = 45.0
+            row_data["age"] = np.nan
 
     if "gender" in FEATURE_COLS:
-        # On garde M/F car le OneHotEncoder a été entraîné avec ces chaînes
-        g = str(gender).upper() if gender and str(gender).upper() in ["M", "F"] else "M"
+        # On garde M/F, et si manquant => "Unknown" pour activer le fallback du modèle
+        g = str(gender).upper() if gender and str(gender).upper() in ["M", "F"] else "Unknown"
         row_data["gender"] = g
 
     df = pd.DataFrame([row_data], columns=FEATURE_COLS)

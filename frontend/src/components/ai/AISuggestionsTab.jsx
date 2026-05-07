@@ -24,12 +24,16 @@ export default function AISuggestionsTab({ symptomsText, patient }) {
     
     const symptomsList = symptomsText.split(",").map(s => s.trim()).filter(s => s);
     
-    // Calcul de l'âge
-    let age = 35;
-    if (patient?.date_naissance) {
-      age = new Date().getFullYear() - new Date(patient.date_naissance).getFullYear();
+    // Calcul de l'âge et du sexe (null si patient absent)
+    let age = null;
+    let gender = null;
+    
+    if (patient) {
+      if (patient.date_naissance) {
+        age = new Date().getFullYear() - new Date(patient.date_naissance).getFullYear();
+      }
+      gender = patient.sexe === "M" ? "M" : "F";
     }
-    const gender = patient?.sexe === "M" ? "M" : "F";
 
     api.post("/consultations/ai-predict/", {
       symptoms: symptomsList,
