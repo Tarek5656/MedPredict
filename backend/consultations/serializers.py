@@ -49,6 +49,9 @@ class ConsultationSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
+    medecin_prenom = serializers.CharField(source="medecin.first_name", read_only=True)
+    medecin_nom = serializers.CharField(source="medecin.last_name", read_only=True)
+    medecin_username = serializers.CharField(source="medecin.username", read_only=True)
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -89,6 +92,7 @@ class ConsultationSerializer(serializers.ModelSerializer):
         model = Consultation
         fields = [
             "id", "patient", "medecin", "rendezvous",
+            "medecin_prenom", "medecin_nom", "medecin_username",
             "date", "symptoms",
             "symptom_ids",
             "symptom_codes",
