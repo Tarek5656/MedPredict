@@ -52,7 +52,7 @@ export default function SymptomesTab({ selectedCodes, onToggle }) {
           <i className="fas fa-search" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: "0.9rem" }}></i>
           <input
             type="text"
-            placeholder="Rechercher (ex: rash, headache...)"
+            placeholder="Rechercher..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             style={{ 

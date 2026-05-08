@@ -58,7 +58,7 @@ export default function Header() {
           }}></i>
           <input 
             type="text" 
-            placeholder="Search patients, records..." 
+            placeholder="Rechercher..." 
             style={{ 
               width: "100%", backgroundColor: "var(--bg-color)", border: "1px solid var(--border-color)", 
               borderRadius: "9999px", padding: "12px 20px 12px 52px", fontSize: "0.875rem",

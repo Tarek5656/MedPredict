@@ -43,7 +43,7 @@ export default function ConsultationFields({
             const typed = e.target.value.split(",").map(s => s.trim()).filter(s => s);
             onChangeSymptomCodes(typed);
           }}
-          placeholder="Exemple: fièvre, toux, fatigue..."
+          placeholder="Saisissez les symptômes..."
         />
 
         {symptomCodes?.length > 0 && (

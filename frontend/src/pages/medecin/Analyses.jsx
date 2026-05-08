@@ -56,7 +56,7 @@ export default function Analyses() {
             const typed = e.target.value.split(",").map(s => s.trim()).filter(s => s);
             setSelectedCodes(typed);
           }}
-          placeholder="Exemple: fièvre, toux, fatigue..."
+          placeholder="Saisissez les symptômes..."
           style={{ 
             width: "100%", 
             height: 80, 

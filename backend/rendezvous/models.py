@@ -11,6 +11,7 @@ class RendezVous(models.Model):
         TERMINER = "termine"
 
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="rendezvous")
+    medecin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="rdvs_as_doctor")
     date_heure = models.DateTimeField()
     duree_minutes = models.PositiveIntegerField()
     motif = models.CharField(max_length=255, blank=True, default="")

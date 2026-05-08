@@ -365,7 +365,6 @@ export default function AdminDashboard() {
                   <input 
                     type="text" 
                     className="w-full" 
-                    placeholder="Jean" 
                     value={newUser.first_name}
                     onChange={e => setNewUser({...newUser, first_name: e.target.value})}
                   />
@@ -375,7 +374,6 @@ export default function AdminDashboard() {
                   <input 
                     type="text" 
                     className="w-full" 
-                    placeholder="Dupont" 
                     value={newUser.last_name}
                     onChange={e => setNewUser({...newUser, last_name: e.target.value})}
                   />
@@ -387,7 +385,6 @@ export default function AdminDashboard() {
                 <input 
                   type="text" 
                   className="w-full" 
-                  placeholder="j.dupont" 
                   required
                   value={newUser.username}
                   onChange={e => setNewUser({...newUser, username: e.target.value})}
@@ -399,7 +396,6 @@ export default function AdminDashboard() {
                 <input 
                   type="email" 
                   className="w-full" 
-                  placeholder="jean@exemple.com" 
                   value={newUser.email}
                   onChange={e => setNewUser({...newUser, email: e.target.value})}
                 />
@@ -410,7 +406,6 @@ export default function AdminDashboard() {
                 <input 
                   type="password" 
                   className="w-full" 
-                  placeholder="••••••••" 
                   required
                   value={newUser.password}
                   onChange={e => setNewUser({...newUser, password: e.target.value})}

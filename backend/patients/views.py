@@ -27,7 +27,14 @@ def me(request):
 def medecins_list(request):
     User = get_user_model()
     qs = User.objects.filter(groups__name="MEDECIN").order_by("username").distinct()
-    data = [{"id": u.id, "username": u.username} for u in qs]
+    data = [
+        {
+            "id": u.id, 
+            "username": u.username,
+            "first_name": u.first_name,
+            "last_name": u.last_name
+        } for u in qs
+    ]
     return Response(data)
 
 @api_view(["PATCH"])

@@ -95,8 +95,22 @@ class DashboardStatsAPIView(APIView):
                 'newRegistrations': calc_trend(registrations_today, registrations_yesterday)
             }
             
-            # Since Rendezvous doesn't have medecin, we just send empty barData or a generic stat
-            data['barData'] = []
+            # Populate barData with appointments per doctor
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            doctors = User.objects.filter(groups__name="MEDECIN")
+            bar_data = []
+            for doc in doctors:
+                count = RendezVous.objects.filter(
+                    medecin=doc,
+                    date_heure__gte=today_start,
+                    date_heure__lt=today_end
+                ).count()
+                bar_data.append({
+                    'name': f"Dr. {doc.last_name}",
+                    'appts': count
+                })
+            data['barData'] = bar_data
             
             pending_rdvs = RendezVous.objects.filter(date_heure__gte=today_start, date_heure__lt=today_end, statut="planifie").order_by('date_heure')
             data['checkInQueue'] = [

@@ -68,7 +68,7 @@ export default function SymptomesTab({ selectedCodes, onChangeSelectedCodes, onA
         <input
           style={{ flex: 1 }}
           value={q}
-          placeholder="Rechercher un symptôme..."
+          placeholder="Rechercher..."
           onChange={(e) => {
             setQ(e.target.value);
             setPage(1);

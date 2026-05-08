@@ -91,7 +91,6 @@ export default function Login() {
               required
               disabled={loading}
               style={{ width: '100%' }}
-              placeholder="ex: docteur_lemaire"
             />
           </div>
 
@@ -105,7 +104,6 @@ export default function Login() {
               required
               disabled={loading}
               style={{ width: '100%' }}
-              placeholder="••••••••"
             />
           </div>
 
