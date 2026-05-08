@@ -4,6 +4,16 @@ import os
 import json
 import pandas as pd
 from flask_cors import CORS
+from ollama_intent import classify_or_reply
+import threading
+
+def warmup():
+    try:
+        classify_or_reply("warmup")
+    except Exception:
+        pass
+
+threading.Thread(target=warmup, daemon=True).start()
 
 app = Flask(__name__)
 CORS(app)
@@ -130,6 +140,28 @@ def diseases():
     except Exception as e:
 
         return jsonify({"error": str(e)}), 500
+
+#chatbot
+import logging
+
+@app.route("/api/whatsapp_chat", methods=["POST"])
+def whatsapp_chat():
+    data = request.get_json()
+    if not data or "message" not in data:
+        return jsonify({"error": "message field is required"}), 400
+
+    txt = (data["message"] or "").strip()
+    if not txt:
+        return jsonify({"intent": "autre", "confidence": 0.0, "message": "", "handled": True, "reply_text": "Je n’ai pas reçu de texte. Peux-tu écrire ta demande en texte (FR/EN/Darija) ?"})
+
+    try:
+        result = classify_or_reply(txt)
+        logging.info("DEBUG whatsapp_chat(ollama): %s -> %s (%.2f)", txt, result["intent"], result["confidence"])
+        return jsonify(result)
+    except Exception as e:
+        logging.exception("Ollama classification failed: %s", e)
+        # fallback safe pour ne pas casser Django
+        return jsonify({"intent": "autre", "confidence": 0.0, "message": txt, "handled": True, "reply_text": "Désolé, je n'ai pas compris. Peux-tu reformuler ta demande ?"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
