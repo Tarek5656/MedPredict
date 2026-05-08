@@ -15,6 +15,7 @@ import Analyses from "./pages/medecin/Analyses.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import Overview from "./pages/Overview.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import NotificationListe from "./pages/NotificationListe.jsx";
 import { applyTheme, themeFromMe } from "./utils/theme";
 import userService from "./services/userService.js";
 
@@ -119,6 +120,14 @@ export default function App() {
             element={
               <RoleRoute allowGroups={["MEDECIN", "SECRETAIRE"]}>
                 <RendezVousListPage />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/notifications/liste"
+            element={
+              <RoleRoute allowGroups={["MEDECIN", "SECRETAIRE", "PATIENT"]}>
+                <NotificationListe />
               </RoleRoute>
             }
           />
