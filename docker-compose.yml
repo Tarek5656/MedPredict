@@ -4,9 +4,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: medpredict_db
-      POSTGRES_USER: medpredict_user
-      POSTGRES_PASSWORD: medpredict_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -31,19 +31,8 @@ services:
     volumes:
       - ./backend:/app
       - /app/venv
-      - ./ai-service/training/data:/data:ro
-    environment:
-      POSTGRES_HOST: db
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: medpredict_db
-      POSTGRES_USER: medpredict_user
-      POSTGRES_PASSWORD: medpredict_password
-      AI_SERVICE_URL: http://ai-service:5000
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
-      TWILIO_ACCOUNT_SID: AC6b71a815241260288c7dba7f65759d74
-      TWILIO_AUTH_TOKEN: 8b5db5aeae238f63334786d5c379cb7a
-      TWILIO_FROM_NUMBER: +17622132680
+    env_file:
+      - .env  # <- adaptez le chemin si besoin : ici la racine
 
   ai-service:
     build: ./ai-service
@@ -60,7 +49,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-  
+    env_file:
+      - .env
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "mistral:latest"
+      OLLAMA_TIMEOUT: "60"
+      OLLAMA_KEEP_ALIVE: "30m"
+      TZ_NAME: "Africa/Casablanca"
+
   frontend:
     build: ./frontend
     volumes:
@@ -73,6 +72,17 @@ services:
     depends_on:
       backend:
         condition: service_started
+    env_file:
+      - .env
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -82,39 +92,33 @@ services:
   celery_worker:
     build: ./backend
     command: celery -A config worker -l INFO
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
-      TWILIO_ACCOUNT_SID: AC6b71a815241260288c7dba7f65759d74
-      TWILIO_AUTH_TOKEN: 8b5db5aeae238f63334786d5c379cb7a
-      TWILIO_FROM_NUMBER: +17622132680
-      POSTGRES_HOST: db
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: medpredict_db
-      POSTGRES_USER: medpredict_user
-      POSTGRES_PASSWORD: medpredict_password
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
+    env_file:
+      - .env
 
   celery_beat:
     build: ./backend
     command: celery -A config beat -l INFO
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
-      POSTGRES_HOST: db
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: medpredict_db
-      POSTGRES_USER: medpredict_user
-      POSTGRES_PASSWORD: medpredict_password
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
+    env_file:
+      - .env
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: http backend:8000
+    ports:
+      - "4040:4040"
+    env_file:
+      - .env
 
 volumes:
   pgdata:
+  ollama:
