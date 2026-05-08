@@ -39,7 +39,7 @@ export default function Login() {
 
       // ✅ routes selon rôle
       if (isSuper) {
-        navigate("/admin", { replace: true });
+        navigate("/admin/dashboard", { replace: true });
       } else if (groups.includes("MEDECIN") || groups.includes("SECRETAIRE")) {
         navigate("/overview", { replace: true });
       } else if (groups.includes("PATIENT")) {
@@ -91,7 +91,6 @@ export default function Login() {
               required
               disabled={loading}
               style={{ width: '100%' }}
-              placeholder="ex: docteur_lemaire"
             />
           </div>
 
@@ -105,7 +104,6 @@ export default function Login() {
               required
               disabled={loading}
               style={{ width: '100%' }}
-              placeholder="••••••••"
             />
           </div>
 

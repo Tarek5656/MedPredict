@@ -48,6 +48,8 @@ class ConsultationViewSet(viewsets.ModelViewSet):
         """
         symptoms = request.data.get("symptoms") or []
         top_k = int(request.data.get("top_k") or 5)
+        age = request.data.get("age")
+        gender = request.data.get("gender")
 
         if not isinstance(symptoms, list) or len(symptoms) == 0:
             return Response(
@@ -56,9 +58,13 @@ class ConsultationViewSet(viewsets.ModelViewSet):
             )
 
         try:
+            payload = {"symptoms": symptoms, "top_k": top_k}
+            if age is not None: payload["age"] = age
+            if gender is not None: payload["gender"] = gender
+            
             r = requests.post(
                 f"{settings.AI_SERVICE_URL}/api/predict",
-                json={"symptoms": symptoms, "top_k": top_k},
+                json=payload,
                 timeout=15,
             )
             return Response(r.json(), status=r.status_code)
@@ -84,6 +90,19 @@ class ConsultationViewSet(viewsets.ModelViewSet):
 
         symptoms = request.data.get("symptoms") or []
         top_k = int(request.data.get("top_k") or 5)
+        
+        # Si fournis par le front, sinon on tente de déduire du patient
+        age = request.data.get("age")
+        gender = request.data.get("gender")
+
+        if not age and consultation.patient and consultation.patient.date_naissance:
+            import datetime
+            today = datetime.date.today()
+            born = consultation.patient.date_naissance
+            age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+            
+        if not gender and consultation.patient and consultation.patient.sexe:
+            gender = consultation.patient.sexe
 
         if not isinstance(symptoms, list) or len(symptoms) == 0:
             return Response(
@@ -92,9 +111,13 @@ class ConsultationViewSet(viewsets.ModelViewSet):
             )
 
         try:
+            payload = {"symptoms": symptoms, "top_k": top_k}
+            if age is not None: payload["age"] = age
+            if gender is not None: payload["gender"] = gender
+            
             r = requests.post(
                 f"{settings.AI_SERVICE_URL}/api/predict",
-                json={"symptoms": symptoms, "top_k": top_k},
+                json=payload,
                 timeout=15,
             )
             data = r.json()

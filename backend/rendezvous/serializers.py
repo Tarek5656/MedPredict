@@ -8,6 +8,8 @@ class RendezVousSerializer(serializers.ModelSerializer):
     end_datetime = serializers.DateTimeField(read_only=True)
     patient_nom = serializers.CharField(source="patient.nom", read_only=True)
     patient_prenom = serializers.CharField(source="patient.prenom", read_only=True)
+    medecin_nom = serializers.CharField(source="medecin.last_name", read_only=True)
+    medecin_prenom = serializers.CharField(source="medecin.first_name", read_only=True)
 
     class Meta:
         model = RendezVous
@@ -16,6 +18,9 @@ class RendezVousSerializer(serializers.ModelSerializer):
             "patient",
             "patient_nom",
             "patient_prenom",
+            "medecin",
+            "medecin_nom",
+            "medecin_prenom",
             "date_heure",
             "duree_minutes",
             "motif",
@@ -38,6 +43,7 @@ class RendezVousSerializer(serializers.ModelSerializer):
         duree = attrs.get("duree_minutes", getattr(instance, "duree_minutes", None))
         statut = attrs.get("statut", getattr(instance, "statut", "planifie"))
         patient = attrs.get("patient", getattr(instance, "patient", None))
+        medecin = attrs.get("medecin", getattr(instance, "medecin", None))
 
         if statut == "planifie" and patient is not None:
             qs = RendezVous.objects.filter(patient=patient, statut="planifie", date_heure__gte=timezone.now(),)
@@ -46,7 +52,7 @@ class RendezVousSerializer(serializers.ModelSerializer):
 
             if qs.exists():
                 raise serializers.ValidationError({
-                    "patient": "Ce patient a déjà un rendez-vous planifié. Annulez/terminez le rendez-vous existant avant d’en créer un nouveau."
+                    "patient": "Ce patient a déjà un rendez-vous planifié avec ce médecin."
                 })
 
         if date_heure is None or duree is None:
@@ -103,10 +109,13 @@ class RendezVousSerializer(serializers.ModelSerializer):
                 "duree_minutes": f"Durée trop longue: il ne reste que {remaining} minutes dans ce créneau."
             })
 
-        # ---- Anti-chevauchement (hors annule) ----
+        # ---- Anti-chevauchement (par médecin, hors annule) ----
         qs = RendezVous.objects.exclude(statut="annule")
         if instance is not None:
             qs = qs.exclude(pk=instance.pk)
+
+        if medecin:
+            qs = qs.filter(medecin=medecin)
 
         candidates = qs.filter(date_heure__lt=end)
 
@@ -114,7 +123,7 @@ class RendezVousSerializer(serializers.ModelSerializer):
             rdv_end = rdv.date_heure + timedelta(minutes=int(rdv.duree_minutes))
             if rdv_end > start:
                 raise serializers.ValidationError({
-                    "date_heure": f"Créneau indisponible: chevauchement avec le RDV #{rdv.id}."
+                    "date_heure": f"Le médecin est indisponible : chevauchement avec un autre rendez-vous à cette heure."
                 })
 
         return attrs

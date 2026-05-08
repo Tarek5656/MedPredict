@@ -93,7 +93,7 @@ DATABASES = {
         'NAME': 'medpredict_db',                       # Nom de la base
         'USER': 'medpredict_user',                     # Utilisateur PostgreSQL
         'PASSWORD': 'medpredict_password',             # Mot de passe
-        'HOST': 'db',                         # 'db' si Docker, 'localhost' si local
+        'HOST': os.environ.get('DB_HOST', 'db'),                         # 'db' si Docker, 'localhost' si local
         'PORT': '5432',                              # Port par défaut de PostgreSQL
     }
 }

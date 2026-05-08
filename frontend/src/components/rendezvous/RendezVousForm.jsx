@@ -4,6 +4,9 @@ import rendezvousService from "../../services/rendezvousService";
 import patientService from "../../services/patientService";
 import userService from "../../services/userService";
 
+const BUSINESS_HOURS = { start: 8, end: 18 };
+const SLOT_DURATION = 30; // minutes
+
 export default function RendezVousForm({
   onSuccess,
   initialValues,
@@ -13,176 +16,148 @@ export default function RendezVousForm({
   fixedPatientId = null,
 }) {
   const [me, setMe] = useState(meProp);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState(null);
 
-  // si meProp change
-  useEffect(() => {
-    setMe(meProp);
-  }, [meProp]);
-
-  // charge "me" si pas fourni
-  useEffect(() => {
-    let alive = true;
-    if (meProp) return;
-
-    (async () => {
-      try {
-        const res = await userService.me();
-        if (alive) setMe(res.data);
-      } catch {
-        // ignore (optionnel)
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [meProp]);
-
-  const isPatientUser = useMemo(
-    () => (me?.groups || []).includes("PATIENT"),
-    [me]
-  );
-
-  const meReady = !!me;
-
-  const [lockedPatientId, setLockedPatientId] = useState(fixedPatientId ?? null);
-  const [lockedPatientLabel, setLockedPatientLabel] = useState("");
-
-  useEffect(() => {
-    let alive = true;
-
-    // priorité au patient fixé par props
-    if (fixedPatientId) {
-      setLockedPatientId(fixedPatientId);
-      setLockedPatientLabel(`Patient #${fixedPatientId}`);
-      return;
-    }
-
-    // si pas patient connecté => pas verrouillé
-    if (!meReady || !isPatientUser) {
-      setLockedPatientId(null);
-      setLockedPatientLabel("");
-      return;
-    }
-
-    (async () => {
-      try {
-        const res = await patientService.me(); // ✅ /patients/me/
-        if (!alive) return;
-
-        setLockedPatientId(res.data.id);
-        setLockedPatientLabel(
-          `#${res.data.id} — ${(res.data.nom || "").trim()} ${(res.data.prenom || "").trim()}`.trim()
-        );
-      } catch {
-        if (!alive) return;
-        setLockedPatientId(null);
-        setLockedPatientLabel("");
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [fixedPatientId, isPatientUser, meReady]);
-
+  // Form State
   const [form, setForm] = useState(() => ({
-    patient: lockedPatientId ? String(lockedPatientId) : "",
-    date_heure: "",
+    patient: "",
+    medecin: "",
+    date: "",
+    time: "",
     duree_minutes: "30",
     motif: "",
     statut: "planifie",
     ...(initialValues || {}),
   }));
 
+  // If initialValues.date_heure exists, split it
+  useEffect(() => {
+    if (initialValues?.date_heure) {
+      const dt = new Date(initialValues.date_heure);
+      if (!isNaN(dt.getTime())) {
+        const ymd = dt.toISOString().split('T')[0];
+        const hm = dt.toTimeString().split(' ')[0].substring(0, 5);
+        setForm(f => ({ ...f, date: ymd, time: hm }));
+      }
+    }
+  }, [initialValues]);
+
   const [patients, setPatients] = useState([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
+  const [medecins, setMedecins] = useState([]);
+  const [loadingMedecins, setLoadingMedecins] = useState(false);
+  
+  // Availability state
+  const [dayAppointments, setDayAppointments] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState(null);
+  const meReady = !!me;
+  const isPatientUser = (me?.groups || []).includes("PATIENT");
+  const [lockedPatientId, setLockedPatientId] = useState(fixedPatientId ?? null);
+  const [lockedPatientLabel, setLockedPatientLabel] = useState("");
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Appliquer initialValues quand ça change
+  // Load "me"
   useEffect(() => {
-    if (!initialValues) return;
-    setForm((f) => ({ ...f, ...initialValues }));
-  }, [initialValues]);
+    if (meProp) return;
+    userService.me().then(res => setMe(res.data)).catch(() => {});
+  }, [meProp]);
 
+  // Load Patient Profile if connected as patient
   useEffect(() => {
-    const v = Number(form.duree_minutes);
-    if (![15, 30].includes(v)) {
-      setForm((f) => ({ ...f, duree_minutes: "30" }));
+    if (fixedPatientId) {
+      setLockedPatientId(fixedPatientId);
+      setLockedPatientLabel(`Patient #${fixedPatientId}`);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.duree_minutes]);
+    if (!meReady || !isPatientUser) return;
 
-  // Forcer patient si verrouillé
+    patientService.me().then(res => {
+      setLockedPatientId(res.data.id);
+      setLockedPatientLabel(`#${res.data.id} — ${res.data.nom} ${res.data.prenom}`);
+    }).catch(() => {});
+  }, [fixedPatientId, isPatientUser, meReady]);
+
+  // Sync locked patient to form
   useEffect(() => {
-    if (!lockedPatientId) return;
-    setForm((f) => ({ ...f, patient: String(lockedPatientId) }));
+    if (lockedPatientId) set("patient", String(lockedPatientId));
   }, [lockedPatientId]);
 
-  // Charger patients
-  // Charger patients (seulement si pas verrouillé)
+  // Load lists
   useEffect(() => {
-    let alive = true;
-
-    // ✅ tant qu'on ne sait pas qui est connecté, ne charge pas la liste
-    if (!meReady) return () => { alive = false; };
-
-    if (lockedPatientId) {
-      setPatients([]);
-      return () => { alive = false; };
-    }
-
-    (async () => {
+    if (!meReady) return;
+    if (!lockedPatientId) {
       setLoadingPatients(true);
-      try {
-        const res = await patientService.getAll({ page: 1 });
-        const items = Array.isArray(res.data) ? res.data : (res.data?.results || []);
-        if (alive) setPatients(items);
-      } catch (e) {
-        if (alive) setErr(extractApiError(e));
-      } finally {
-        if (alive) setLoadingPatients(false);
-      }
-    })();
+      patientService.getAll({ page: 1 }).then(res => {
+        setPatients(Array.isArray(res.data) ? res.data : (res.data?.results || []));
+      }).finally(() => setLoadingPatients(false));
+    }
+    setLoadingMedecins(true);
+    userService.medecins().then(res => setMedecins(res.data || [])).finally(() => setLoadingMedecins(false));
+  }, [meReady, lockedPatientId]);
 
-    return () => {
-      alive = false;
-    };
-  }, [lockedPatientId, meReady]);
+  // Fetch appointments for availability
+  useEffect(() => {
+    if (!form.date || !form.medecin) {
+      setDayAppointments([]);
+      return;
+    }
+    setLoadingSlots(true);
+    rendezvousService.listByDate(form.date)
+      .then(res => {
+        const all = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        // Filter by selected doctor
+        setDayAppointments(all.filter(a => String(a.medecin) === String(form.medecin) && a.statut !== 'annule'));
+      })
+      .finally(() => setLoadingSlots(false));
+  }, [form.date, form.medecin]);
+
+  // Calculate Slots
+  const availableSlots = useMemo(() => {
+    const slots = [];
+    const startHour = BUSINESS_HOURS.start;
+    const endHour = BUSINESS_HOURS.end;
+    
+    for (let h = startHour; h < endHour; h++) {
+      for (let m = 0; m < 60; m += SLOT_DURATION) {
+        const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        
+        // Check if occupied
+        const isOccupied = dayAppointments.some(appt => {
+          // Simplistic check: if it starts at the exact same time
+          // In a real app, we should check for overlaps based on duration
+          const apptTime = new Date(appt.date_heure).toTimeString().substring(0, 5);
+          return apptTime === timeStr;
+        });
+
+        slots.push({ time: timeStr, available: !isOccupied });
+      }
+    }
+    return slots;
+  }, [dayAppointments]);
 
   const submit = async (e) => {
     e.preventDefault();
     setErr(null);
 
     if (!form.patient) return setErr("Le patient est obligatoire.");
-    if (!String(form.date_heure || "").trim()) return setErr("La date/heure est obligatoire.");
+    if (!form.medecin) return setErr("Le médecin est obligatoire.");
+    if (!form.date || !form.time) return setErr("La date et l'heure sont obligatoires.");
 
     setLoading(true);
     try {
       const payload = {
-        ...form,
-        patient: lockedPatientId ? Number(lockedPatientId) : Number(form.patient),
-        date_heure: String(form.date_heure).trim(),
-        duree_minutes: form.duree_minutes ? Number(form.duree_minutes) : null,
-        motif: String(form.motif || "").trim(),
-        statut: form.statut,
+        patient: Number(form.patient),
+        medecin: Number(form.medecin),
+        date_heure: `${form.date}T${form.time}:00`,
+        duree_minutes: Number(form.duree_minutes),
+        motif: form.motif,
+        statut: "planifie",
       };
-
       const res = await rendezvousService.create(payload);
       onSuccess?.(res.data);
-
-      // reset (on garde patient si verrouillé)
-      setForm((f) => ({
-        patient: lockedPatientId ? String(lockedPatientId) : "",
-        date_heure: "",
-        duree_minutes: "30",
-        motif: "",
-        statut: "planifie",
-      }));
     } catch (e2) {
       setErr(extractApiError(e2));
     } finally {
@@ -190,157 +165,121 @@ export default function RendezVousForm({
     }
   };
 
-  const patientLabel = (p) => {
-    const nom = p.nom || "";
-    const prenom = p.prenom || "";
-    return `#${p.id} — ${nom} ${prenom}`.trim();
-  };
-
   return (
-    <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {err ? (
-        <div style={{
-          background: "var(--error-container)",
-          color: "var(--on-error-container)",
-          padding: "12px 16px",
-          borderRadius: 12,
-          fontSize: "0.875rem",
-        }}>
+    <form onSubmit={submit} className="space-y-6 animate-fade-in">
+      {err && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm font-medium border border-red-100 flex items-center gap-3">
+          <i className="fa-solid fa-circle-exclamation"></i>
           {err}
         </div>
-      ) : null}
+      )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div style={{ gridColumn: "1 / -1" }}>
-          <label style={{ display: "block", marginBottom: 6, fontSize: "0.875rem", fontWeight: 600 }}>
-            Patient *
-          </label>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Patient Selection */}
+        <div className={`${lockedPatientId ? '' : 'md:col-span-2'} space-y-1.5`}>
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Patient *</label>
           {lockedPatientId ? (
-            <input
-              value={lockedPatientLabel || `Patient #${lockedPatientId}`}
-              readOnly
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: 12,
-                border: "none",
-                background: "var(--surface-container-high)",
-                fontSize: "0.95rem",
-                opacity: 0.9,
-              }}
-            />
+            <div className="relative">
+              <input value={lockedPatientLabel} readOnly className="w-full bg-gray-50 border-gray-100 py-3 px-4 rounded-xl text-sm font-semibold text-gray-600 cursor-default" />
+              <i className="fa-solid fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+            </div>
           ) : (
-            <select
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: 12,
-                border: "none",
-                background: "var(--surface-container-high)",
-                fontSize: "0.95rem",
-              }}
-              value={form.patient}
-              onChange={(e) => set("patient", e.target.value)}
-              disabled={loadingPatients || loading}
-            >
-              <option value="">{loadingPatients ? "Chargement..." : "-- choisir --"}</option>
-              {patients.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {patientLabel(p)}
-                </option>
+            <div className="relative group">
+              <select className="w-full bg-gray-50 border-gray-200 focus:border-[var(--primary)] focus:bg-white transition-all py-3 px-4 rounded-xl text-sm font-semibold text-gray-800 appearance-none cursor-pointer"
+                value={form.patient} onChange={e => set("patient", e.target.value)} disabled={loadingPatients}>
+                <option value="">{loadingPatients ? "Chargement..." : "-- choisir le patient --"}</option>
+                {patients.map(p => <option key={p.id} value={p.id}>#{p.id} — {p.nom} {p.prenom}</option>)}
+              </select>
+              <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+            </div>
+          )}
+        </div>
+
+        {/* Doctor Selection */}
+        <div className="md:col-span-2 space-y-1.5">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Médecin *</label>
+          <div className="relative group">
+            <select className="w-full bg-gray-50 border-gray-200 focus:border-[var(--primary)] focus:bg-white transition-all py-3 px-4 rounded-xl text-sm font-semibold text-gray-800 appearance-none cursor-pointer"
+              value={form.medecin} onChange={e => set("medecin", e.target.value)} disabled={loadingMedecins}>
+              <option value="">{loadingMedecins ? "Chargement..." : "-- choisir le médecin --"}</option>
+              {medecins.map(m => (
+                <option key={m.id} value={m.id}>Dr. {m.first_name || m.last_name ? `${m.first_name || ""} ${m.last_name || ""}`.trim() : m.username}</option>
               ))}
             </select>
-          )}
+            <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+          </div>
+        </div>
 
-          {lockedPatientId ? (
-            <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
-              Patient verrouillé (compte patient connecté).
+        {/* Date Picker */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Date *</label>
+          <input type="date" className="w-full bg-gray-50 border-gray-100 focus:border-[var(--primary)] focus:bg-white transition-all py-3 px-4 rounded-xl text-sm font-semibold text-gray-800"
+            value={form.date} onChange={e => set("date", e.target.value)} disabled={lockDateTime} />
+        </div>
+
+        {/* Duration Picker */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Durée</label>
+          <div className="relative group">
+            <select className="w-full bg-gray-50 border-gray-200 focus:border-[var(--primary)] focus:bg-white transition-all py-3 px-4 rounded-xl text-sm font-semibold text-gray-800 appearance-none cursor-pointer"
+              value={form.duree_minutes} onChange={e => set("duree_minutes", e.target.value)} disabled={lockDuree}>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+            </select>
+            <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
+          </div>
+        </div>
+
+        {/* Time Slots Selection */}
+        <div className="md:col-span-2 space-y-3">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex justify-between items-center">
+            Horaires disponibles
+            {loadingSlots && <i className="fa-solid fa-circle-notch fa-spin text-primary"></i>}
+          </label>
+          
+          {!form.medecin || !form.date ? (
+            <div className="bg-gray-50 border border-dashed border-gray-200 p-6 rounded-2xl text-center text-gray-400 text-sm">
+              Sélectionnez un médecin et une date pour voir les créneaux
             </div>
-          ) : null}
+          ) : (
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {availableSlots.map(slot => (
+                <button
+                  key={slot.time}
+                  type="button"
+                  disabled={!slot.available || lockDateTime}
+                  onClick={() => set("time", slot.time)}
+                  className={`py-2.5 rounded-xl text-xs font-bold transition-all border-2 relative flex items-center justify-center gap-1 ${
+                    form.time === slot.time 
+                      ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-lg shadow-green-200 scale-110 z-10' 
+                      : !slot.available 
+                        ? 'bg-gray-50 text-gray-300 border-gray-50 cursor-not-allowed opacity-40' 
+                        : 'bg-white text-gray-600 border-gray-100 hover:border-[var(--primary)] hover:text-[var(--primary)] hover:scale-105'
+                  }`}
+                >
+                  {form.time === slot.time && <i className="fa-solid fa-check text-[10px]"></i>}
+                  {slot.time}
+                </button>
+              ))}
+            </div>
+          )}
+          {form.time && !availableSlots.find(s => s.time === form.time)?.available && (
+             <p className="text-[10px] text-orange-500 font-bold ml-1 italic">* Ce créneau a été réservé entre temps</p>
+          )}
         </div>
 
-        <div>
-          <label style={{ display: "block", marginBottom: 6, fontSize: "0.875rem", fontWeight: 600 }}>
-            Date & heure *
-          </label>
-          <input
-            type="datetime-local"
-            style={{
-              width: "100%",
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "none",
-              background: "var(--surface-container-high)",
-              fontSize: "0.95rem",
-              opacity: lockDateTime ? 0.85 : 1,
-            }}
-            value={form.date_heure}
-            onChange={(e) => set("date_heure", e.target.value)}
-            disabled={loading || lockDateTime}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: "block", marginBottom: 6, fontSize: "0.875rem", fontWeight: 600 }}>
-            Durée (min)
-          </label>
-          <select
-            style={{
-              width: "100%",
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "none",
-              background: "var(--surface-container-high)",
-              fontSize: "0.95rem",
-              opacity: lockDuree ? 0.85 : 1,
-            }}
-            value={String(form.duree_minutes || "30")}
-            onChange={(e) => set("duree_minutes", e.target.value)}
-            disabled={loading || lockDuree}
-          >
-            <option value="15">15 min</option>
-            <option value="30">30 min</option>
-          </select>
-        </div>
-
-        <div style={{ gridColumn: "1 / -1" }}>
-          <label style={{ display: "block", marginBottom: 6, fontSize: "0.875rem", fontWeight: 600 }}>
-            Motif
-          </label>
-          <input
-            style={{
-              width: "100%",
-              padding: "10px 14px",
-              borderRadius: 12,
-              border: "none",
-              background: "var(--surface-container-high)",
-              fontSize: "0.95rem",
-            }}
-            value={form.motif}
-            onChange={(e) => set("motif", e.target.value)}
-            disabled={loading}
-          />
+        {/* Motif */}
+        <div className="md:col-span-2 space-y-1.5">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Motif de consultation</label>
+          <input className="w-full bg-gray-50 border-gray-100 focus:border-[var(--primary)] focus:bg-white transition-all py-3 px-4 rounded-xl text-sm font-semibold text-gray-800"
+            value={form.motif} onChange={e => set("motif", e.target.value)} />
         </div>
       </div>
 
-      <button
-        style={{
-          marginTop: 24,
-          padding: "12px 24px",
-          borderRadius: 9999,
-          border: "none",
-          background: "var(--primary)",
-          color: "white",
-          fontWeight: 600,
-          fontSize: "1rem",
-          cursor: "pointer",
-          width: "100%",
-        }}
-        disabled={loading}
-        type="submit"
-      >
-        {loading ? "Création..." : "Créer le rendez-vous"}
+      <button className="w-full mt-4 bg-[var(--primary)] text-white py-4 rounded-2xl font-bold shadow-lg shadow-green-100 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+        disabled={loading || !form.time} type="submit">
+        {loading ? <i className="fa-solid fa-circle-notch fa-spin"></i> : <i className="fa-solid fa-calendar-check"></i>}
+        {loading ? "Création en cours..." : "Confirmer le rendez-vous"}
       </button>
     </form>
   );

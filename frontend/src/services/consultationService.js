@@ -10,11 +10,11 @@ const consultationService = {
   deleteOrdonnance: (id) => api.delete(`/consultations/${id}/ordonnance/`),
   
   // ✅ IA (sans consultation) — utilise /consultations/ai-predict/
-  aiPredict: ({ symptoms, top_k = 5 }) =>
-    api.post("/consultations/ai-predict/", { symptoms, top_k }),
+  aiPredict: ({ symptoms, top_k = 5, age, gender }) =>
+    api.post("/consultations/ai-predict/", { symptoms, top_k, age, gender }),
   // ✅ IA (enregistre dans la consultation)
-  aiPredictForConsultation: (id, { symptoms, top_k = 5 }) =>
-    api.post(`/consultations/${id}/ai-predict/`, { symptoms, top_k }),
+  aiPredictForConsultation: (id, { symptoms, top_k = 5, age, gender }) =>
+    api.post(`/consultations/${id}/ai-predict/`, { symptoms, top_k, age, gender }),
 
   // (optionnel) features microservice (si tu en as encore besoin)
   aiFeatures: () => api.get("/consultations/ai-features/"),

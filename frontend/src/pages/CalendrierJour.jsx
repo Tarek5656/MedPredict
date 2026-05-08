@@ -5,6 +5,7 @@ import rendezvousService from "../services/rendezvousService";
 import { extractApiError } from "../utils/format";
 import RendezVousForm from "../components/rendezvous/RendezVousForm";
 import userService from "../services/userService";
+import Modal from "../components/Modal";
 
 function pad(n) { return String(n).padStart(2, "0"); }
 function toYMD(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
@@ -40,6 +41,8 @@ export default function CalendrierJour() {
   );
 
   const [items, setItems] = useState([]);
+  const [medecinFilter, setMedecinFilter] = useState("ALL");
+  const [medecins, setMedecins] = useState([]);
   const [dureeMinutes, setDureeMinutes] = useState(30);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
@@ -75,11 +78,13 @@ export default function CalendrierJour() {
     try {
       const res = await rendezvousService.listByDate(toYMD(day));
       const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-      const [meRes] = await Promise.all([
+      const [meRes, medecinsRes] = await Promise.all([
         userService.me(),
+        userService.medecins(),
       ]);
 
       setMe(meRes.data);
+      setMedecins(medecinsRes.data || []);
       data.sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure));
       setItems(data);
     } catch (e) {
@@ -96,12 +101,17 @@ export default function CalendrierJour() {
   }, [day.toDateString()]);
 
   const rdvIntervals = useMemo(() => {
-    return items.map((r) => {
+    let filtered = [...items];
+    if (medecinFilter !== "ALL") {
+      filtered = filtered.filter(r => String(r.medecin) === String(medecinFilter));
+    }
+
+    return filtered.map((r) => {
       const start = new Date(r.date_heure);
       const end = addMinutes(start, Number(r.duree_minutes || 0));
       return { ...r, _start: start, _end: end };
     });
-  }, [items]);
+  }, [items, medecinFilter]);
 
   const slots = useMemo(() => buildSlots(day, 15), [day]);
 
@@ -119,46 +129,46 @@ export default function CalendrierJour() {
   return (
     <>
       <div className="page-container animate-fade-in">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-10">
           <h2 className="text-3xl font-bold text-gray-900 m-0">Agenda du jour</h2>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <button className="outline" style={{ padding: '0.6rem' }} onClick={() => setDay(addDays(day, -1))}>
+          <div className="flex items-center gap-3 ml-auto">
+            {/* Navigation Date Style Smooth */}
+            <button
+              className="w-10 h-10 rounded-full text-[var(--primary)] bg-white hover:bg-[var(--primary)] hover:text-white transition-all flex items-center justify-center shadow-sm"
+              onClick={() => setDay(addDays(day, -1))}
+            >
               <i className="fa-solid fa-chevron-left"></i>
             </button>
-            <div className="badge badge-success" style={{ padding: '0.8rem 1.5rem', fontSize: '1rem', fontWeight: 700 }}>
-              {day.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+
+            <div className="bg-[#dcfce7] text-[#115e59] px-8 py-3 rounded-full font-bold text-lg shadow-sm">
+              {day.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
-            <button className="outline" style={{ padding: '0.6rem' }} onClick={() => setDay(addDays(day, 1))}>
+
+            <button
+              className="w-10 h-10 rounded-full text-[var(--primary)] bg-white hover:bg-[var(--primary)] hover:text-white transition-all flex items-center justify-center shadow-sm"
+              onClick={() => setDay(addDays(day, 1))}
+            >
               <i className="fa-solid fa-chevron-right"></i>
             </button>
-          </div>
 
-          <div className="flex items-center gap-3 ml-4">
-            <div className="flex items-center gap-2 bg-gray-100 p-2 rounded-xl border border-gray-200">
-              <label className="text-xs font-bold text-gray-500 uppercase ml-2">Durée</label>
-              <select 
-                value={dureeMinutes} 
-                onChange={(e) => setDureeMinutes(Number(e.target.value))}
-                className="bg-transparent border-none p-1 font-bold text-primary"
-                style={{ width: 'auto', minWidth: '80px' }}
+            <div aria-hidden="true" style={{ width: 1, height: 32, backgroundColor: "var(--border-color)", margin: "0 8px" }} />
+
+            <div className="relative">
+              <select
+                className="bg-white border border-gray-100 rounded-full px-6 py-3 text-sm font-bold text-gray-700 shadow-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none cursor-pointer pr-10"
+                value={medecinFilter}
+                onChange={(e) => setMedecinFilter(e.target.value)}
               >
-                <option value={15}>15 min</option>
-                <option value={30}>30 min</option>
-                <option value={45}>45 min</option>
-                <option value={60}>60 min</option>
+                <option value="ALL">Tous les médecins</option>
+                {medecins.map(m => (
+                  <option key={m.id} value={m.id}>
+                    Dr. {m.first_name || m.last_name ? `${m.first_name || ""} ${m.last_name || ""}`.trim() : m.username}
+                  </option>
+                ))}
               </select>
+              <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
             </div>
-            
-            <button 
-              onClick={load} 
-              disabled={loading}
-              className="outline"
-              style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
-            >
-              <i className={`fa-solid fa-arrows-rotate ${loading ? "fa-spin" : ""}`}></i>
-              Rafraîchir
-            </button>
           </div>
         </div>
 
@@ -193,25 +203,30 @@ export default function CalendrierJour() {
                       <div style={{ fontWeight: 800 }}>
                         {rdv.patient_nom} {rdv.patient_prenom}
                       </div>
-                      <div style={{ opacity: 0.8 }}>
-                        {rdv.motif || "—"} • {rdv.duree_minutes} min • {rdv.statut_effectif}
+                      <div style={{ opacity: 0.8, fontSize: "0.85rem" }}>
+                        <span style={{ color: "var(--primary)", fontWeight: 600 }}>
+                          Dr. {rdv.medecin_nom || rdv.medecin_prenom ? `${rdv.medecin_prenom || ""} ${rdv.medecin_nom || ""}`.trim() : `Doc #${rdv.medecin}`}
+                        </span>
+                        {" • "}{rdv.motif || "—"} • {rdv.duree_minutes} min
                       </div>
                     </>
                   ) : (
-                    <div style={{ opacity: 0.75 }}>Libre</div>
+                    <div style={{ opacity: 0.75 }}>
+                      {past ? "Indisponible" : "Libre"}
+                    </div>
                   )}
                 </div>
 
                 {(!isMedecin) ? (
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                {!rdv && free && !past ? (
-                    <button type="button" onClick={() => openAdd(slotStart)}>
-                    + Ajouter
-                    </button>
-                ) : (
-                    <span />
-                )}
-                </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    {!rdv && free && !past ? (
+                      <button type="button" onClick={() => openAdd(slotStart)}>
+                        + Ajouter
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+                  </div>
                 ) : null}
               </div>
             );
@@ -219,58 +234,27 @@ export default function CalendrierJour() {
         </div>
       </div>
 
-      {showModal && (
-        <div
-          onClick={closeModal}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.45)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: 16,
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title="Nouveau rendez-vous"
+        maxWidth="max-w-2xl"
+      >
+        <RendezVousForm
+          me={me}
+          initialValues={{
+            date_heure: selectedSlot ? toDateTimeLocal(selectedSlot) : "",
+            duree_minutes: String(dureeMinutes),
+            statut: "planifie",
+            medecin: medecinFilter !== "ALL" ? medecinFilter : "",
           }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="card"
-            style={{ width: "min(720px, 100%)", padding: 16 }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-              <h3 className="text-xl font-bold text-gray-800 m-0">Nouveau rendez-vous</h3>
-              <button 
-                type="button" 
-                onClick={closeModal} 
-                style={{ 
-                  marginLeft: "auto", background: "transparent", border: "none", cursor: "pointer",
-                  width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "var(--text-muted)"
-                }}
-                className="hover-bg-slate"
-              >
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-
-            <RendezVousForm
-              me={me}
-              initialValues={{
-                date_heure: selectedSlot ? toDateTimeLocal(selectedSlot) : "",
-                duree_minutes: String(dureeMinutes),
-                statut: "planifie",
-              }}
-              lockDateTime={true}     // ✅ verrouille date/heure
-              // lockDuree={true}      // optionnel: verrouiller aussi la durée
-              onSuccess={() => {
-                closeModal();
-                load();
-              }}
-            />
-          </div>
-        </div>
-      )}
+          lockDateTime={true}
+          onSuccess={() => {
+            closeModal();
+            load();
+          }}
+        />
+      </Modal>
     </>
   );
 }

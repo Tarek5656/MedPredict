@@ -13,8 +13,16 @@ export function menuItems(me) {
     { name: "Analyses", icon: "fa-solid fa-chart-simple", path: "/analyses" },
   ];
 
-  // superuser / medecin : ne change rien
-  if (me?.is_superuser || groups.includes("MEDECIN")) return base;
+  // superuser : Administration + Analyses
+  if (me?.is_superuser) {
+    return [
+      { name: "Administration", icon: "fa-solid fa-crown", path: "/admin/dashboard" },
+      { name: "Analyses", icon: "fa-solid fa-chart-simple", path: "/analyses" }
+    ];
+  }
+
+  // medecin : ne change rien
+  if (groups.includes("MEDECIN")) return base;
 
   // secretaire : enlever Analytics
   if (groups.includes("SECRETAIRE")) {

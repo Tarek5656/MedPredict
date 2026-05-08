@@ -3,12 +3,11 @@ import { Link } from "react-router-dom";
 import rendezvousService from "../services/rendezvousService";
 import { extractApiError } from "../utils/format";
 import RendezVousForm from "../components/rendezvous/RendezVousForm";
-import SlideDrawer from "../components/SlideDrawer";
+import Modal from "../components/Modal";
 import userService from "../services/userService";
 
 const DEFAULT_FILTERS = {
   statut: "",
-  patient: "",
   q: "",
   page: 1,
 };
@@ -16,7 +15,7 @@ const DEFAULT_FILTERS = {
 export default function RendezVousListPage() {
   const [items, setItems] = useState([]);
   const [count, setCount] = useState(0);
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [isModalOpen, setModalOpen] = useState(false);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
@@ -33,7 +32,7 @@ export default function RendezVousListPage() {
   const isAdmin = isSuperuser || (me?.groups || []).includes("ADMIN");
 
   const handleCreated = () => {
-    setDrawerOpen(false);
+    setModalOpen(false);
     load();
   };
 
@@ -95,7 +94,10 @@ export default function RendezVousListPage() {
   
           {(isAdmin || isSecretaire) ? (
             <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-              <button onClick={() => setDrawerOpen(true)}>
+              <button 
+                onClick={() => setModalOpen(true)}
+                className="bg-[var(--primary)] text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-green-100 hover:scale-105 transition-all flex items-center gap-2"
+              >
                 <i className="fa-solid fa-plus"></i>
                 Nouveau rendez-vous
               </button>
@@ -136,7 +138,7 @@ export default function RendezVousListPage() {
             </div>
           </div>
   
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
             <div>
               <label>Statut</label>
               <select
@@ -152,21 +154,11 @@ export default function RendezVousListPage() {
             </div>
   
             <div>
-              <label>Patient (ID)</label>
-              <input
-                style={{ width: "100%" }}
-                value={filters.patient}
-                onChange={(e) => setFilters((s) => ({ ...s, patient: e.target.value, page: 1 }))}
-                placeholder="ex: 4"
-              />
-            </div>
-            <div>
             <label>Patient (nom/prénom)</label>
             <input
               style={{ width: "100%" }}
               value={filters.q}
               onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value, page: 1 }))}
-              placeholder="ex: charf tarek"
             />
           </div>
           </div>
@@ -182,7 +174,6 @@ export default function RendezVousListPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Id</th>
                     <th>Date</th>
                     <th>Statut</th>
                     <th>Patient</th>
@@ -193,7 +184,6 @@ export default function RendezVousListPage() {
                 <tbody>
                   {items.map((rdv) => (
                     <tr key={rdv.id}>
-                      <td style={{ fontWeight: 600 }}>{rdv.id || "—"}</td>
                       <td>{rdv.date || ""} {rdv.heure || ""} {(rdv.date_heure && new Date(rdv.date_heure).toLocaleString()) || ""}</td>
                       <td>
                         <span className={`badge ${rdv.statut === "termine" || rdv.statut_effectif === "termine" ? "badge-success" : rdv.statut === "annule" || rdv.statut_effectif === "annule" ? "badge-error" : "badge-warning"}`}>
@@ -233,9 +223,14 @@ export default function RendezVousListPage() {
           </div>
         </div>
 
-        <SlideDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} title="Nouveau Rendez-vous">
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => setModalOpen(false)} 
+          title="Nouveau Rendez-vous"
+          maxWidth="max-w-2xl"
+        >
           <RendezVousForm onSuccess={handleCreated} />
-        </SlideDrawer>
+        </Modal>
       </div>
     );
 }
