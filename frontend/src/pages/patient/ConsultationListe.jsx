@@ -8,9 +8,13 @@ export default function ConsultationsPatient() {
   const [items, setItems] = useState([]);
   const [patient, setPatient] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
 
+  const count = items.length;
+
   const load = async () => {
+    setLoading(true);
     setErr(null);
     try {
       const [cRes, pRes] = await Promise.all([
@@ -22,6 +26,8 @@ export default function ConsultationsPatient() {
       setPatient(pRes.data);
     } catch (e) {
       setErr(extractApiError(e));
+      } finally {
+      setLoading(false);
     }
   };
 
@@ -33,6 +39,12 @@ export default function ConsultationsPatient() {
 
   return (
     <div className="page-container animate-fade-in">
+      {loading && <p>Chargement...</p>}
+      {err && <p style={{ color: "red" }}>Erreur: {err}</p>}
+
+      {!loading && !err && count === 0 && <p>Aucune consultation à afficher.</p>}
+      {!loading && !err && count > 0 && (
+        <>
       {items.map((c) => {
         const open = expandedId === c.id;
         return (
@@ -104,6 +116,8 @@ export default function ConsultationsPatient() {
           </div>
         );
       })}
+          </>
+      )}
     </div>
   );
 }

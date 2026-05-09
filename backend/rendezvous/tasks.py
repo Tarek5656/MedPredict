@@ -8,7 +8,7 @@ from .models import RendezVous
 from .sms import send_sms
 from .phone_utils import normalize_ma_phone
 
-from notifications.services import notify_group
+from notifications.services import notify_user
 from notifications.models import Notification
 
 @shared_task(bind=True, max_retries=5, default_retry_delay=60)
@@ -85,13 +85,14 @@ def send_rdv_notifications_10min(self):
                 if locked.statut != RendezVous.Statut.PLANIFIE:
                     continue
 
+                medecin = locked.medecin
                 dt_local = timezone.localtime(locked.date_heure)
                 title = "Rendez-vous dans 15 minutes"
                 body = f"Patient: {locked.patient.nom} {locked.patient.prenom} — {dt_local.strftime('%d/%m/%Y à %H:%M')}"
                 url = f"/patients/{locked.patient_id}"  # adapte à ta route front
 
-                notify_group(
-                    "MEDECIN",
+                notify_user(
+                    medecin,
                     type=Notification.Type.RDV_REMINDER_10MIN,
                     title=title,
                     body=body,

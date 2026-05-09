@@ -19,7 +19,9 @@ django-cors-headers==4.9.0
 django-filter==25.2
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
+dotenv==0.9.9
 drf-spectacular==0.29.0
+faster-whisper==1.0.3
 frozenlist==1.8.0
 idna==3.11
 inflection==0.5.1
@@ -36,6 +38,7 @@ psycopg==3.3.3
 psycopg-binary==3.3.3
 PyJWT==2.11.0
 python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
 PyYAML==6.0.3
 redis==7.4.0
 referencing==0.37.0

@@ -24,3 +24,12 @@ def notify_group(group_name: str, *, type: str, title: str, body: str = "", url:
     with transaction.atomic():
         Notification.objects.bulk_create(notifs)
     return len(notifs)
+
+
+def notify_user(user, *, type: str, title: str, body: str = "", url: str = "") -> Notification:
+    """
+    Crée une notification pour un utilisateur spécifique.
+    """
+    notif = Notification(user=user, type=type, title=title, body=body, url=url)
+    notif.save()
+    return notif

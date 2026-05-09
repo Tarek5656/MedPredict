@@ -4,8 +4,8 @@ import rendezvousService from "../../services/rendezvousService";
 import patientService from "../../services/patientService";
 import userService from "../../services/userService";
 
-const BUSINESS_HOURS = { start: 8, end: 18 };
-const SLOT_DURATION = 30; // minutes
+const BUSINESS_HOURS = { start: 9, end: 18 };
+const SLOT_DURATION = 15; // minutes
 
 export default function RendezVousForm({
   onSuccess,
