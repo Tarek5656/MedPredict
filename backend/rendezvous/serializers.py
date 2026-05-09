@@ -86,6 +86,23 @@ class RendezVousSerializer(serializers.ModelSerializer):
 
         t_start = start.timetz().replace(tzinfo=None)
 
+        # ---- Restriction jours ----
+        # weekday(): 0=lundi ... 5=samedi ... 6=dimanche
+        wd = start.weekday()
+
+        if wd == 6:  # dimanche
+            raise serializers.ValidationError({
+                "date_heure": "Aucun rendez-vous le dimanche."
+            })
+
+        # samedi: matin uniquement
+        if wd == 5:
+            if not (morning_start <= t_start < morning_end):
+                raise serializers.ValidationError({
+                    "date_heure": "Le samedi, les rendez-vous sont possibles uniquement le matin (09:00-13:00)."
+                })
+        # lundi-vendredi: ok (matin ou après-midi, géré par la suite)
+
         # Déterminer fin de créneau selon l'heure de début
         if morning_start <= t_start < morning_end:
             slot_end_time = morning_end

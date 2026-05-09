@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 export default function NotificationsTab() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
+  const [filter, setFilter] = useState("non lues");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const boxRef = useRef(null);
@@ -20,6 +21,16 @@ export default function NotificationsTab() {
     () => items.filter((n) => !n.read).length,
     [items]
   );
+
+  const filteredItems = useMemo(() => {
+    if (filter === "non lues") {
+      return items.filter((n) => !n.read);
+    }
+    if (filter === "lues") {
+      return items.filter((n) => n.read);
+    }
+    return items;
+  }, [items, filter]);
 
   async function refresh() {
     setLoading(true);
@@ -155,53 +166,122 @@ export default function NotificationsTab() {
         >
             <div
             style={{
-                padding: "16px 20px",
+                padding: "12px 14px 10px",
                 borderBottom: "1px solid var(--border-color)",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
                 background: "var(--card-bg)",
                 position: "sticky",
                 top: 0,
-                zIndex: 10
+                zIndex: 10,
             }}
             >
-            <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: ".01em" }}>Notifications</div>
-            <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
+            {/* Ligne 1: titre centré + close à droite */}
+            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ fontWeight: 800, fontSize: 16, letterSpacing: ".01em" }}>
+                Notifications
+              </div>
+
+              <button
+                onClick={() => setOpen(false)}
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--text-muted)",
+                  boxShadow: "none",
+                }}
+                className="hover-bg-slate"
+                title="Fermer"
+              >
+                <i className="fa-solid fa-xmark" style={{ fontSize: "1.15rem" }} />
+              </button>
+            </div>
+
+            {/* Ligne 2: gauche / centre / droite */}
+              <div
+              style={{
+                marginTop: 10,
+                display: "grid",
+                gridTemplateColumns: "1fr auto 1fr",
+                alignItems: "center",
+                gap: 10,
+              }}
+                >
+                {/* Gauche */}
+              <div style={{ justifySelf: "start" }}>
                 <button
+                  onClick={() => setFilter((prev) => (prev === "non lues" ? "lues" : "non lues"))}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    padding: "4px 10px",
+                    background: "transparent",
+                    color: "var(--primary)",
+                    cursor: "pointer",
+                    boxShadow: "none",
+                  }}
+                  className="hover-bg-slate"
+                  title="Basculer le filtre"
+                >
+                  Voir {filter === "non lues" ? "lues" : "non lues"}
+                </button>
+              </div>
+
+                {/* Centre */}
+              <button
                 onClick={onMarkAllRead}
                 style={{
+                  justifySelf: "center",
+                  fontSize: 13,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--primary)",
+                  fontWeight: 600,
+                  padding: 0,
+                  boxShadow: "none",
+                  whiteSpace: "nowrap",
+                }}
+                className="hover-opacity"
+              >
+                Tout marquer lu
+              </button>
+
+                {/* Droite */}
+              <div style={{ justifySelf: "end" }}>
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    navigate("/notifications/liste");
+                  }}
+                  style={{
                     fontSize: 13,
                     background: "transparent",
                     border: "none",
                     cursor: "pointer",
                     color: "var(--primary)",
-                    fontWeight: 500,
+                    fontWeight: 600,
                     padding: 0,
-                    boxShadow: "none"
-                }}
-                className="hover-opacity"
+                    boxShadow: "none",
+                    whiteSpace: "nowrap",
+                  }}
+                  className="hover-opacity"
+                  title="Voir toutes les notifications"
                 >
-                Tout marquer lu
+                  Voir tous
                 </button>
-                <button
-                onClick={() => setOpen(false)}
-                style={{
-                    fontSize: 13,
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--text-muted)",
-                    fontWeight: 500,
-                    padding: 0,
-                    boxShadow: "none"
-                }}
-                className="hover-opacity"
-                >
-                Fermer
-                </button>
+              </div>
             </div>
-            </div>
+          </div>
 
             <div style={{ overflow: "auto", maxHeight: "360px" }}>
                 {loading && (
@@ -220,7 +300,7 @@ export default function NotificationsTab() {
 
                 {!loading &&
                 !error &&
-                items.map((n) => (
+                filteredItems.map((n) => (
                     <div
                     key={n.id}
                     style={{
