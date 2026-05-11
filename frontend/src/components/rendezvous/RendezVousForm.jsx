@@ -49,7 +49,7 @@ export default function RendezVousForm({
   const [loadingMedecins, setLoadingMedecins] = useState(false);
   
   // Availability state
-  const [dayAppointments, setDayAppointments] = useState([]);
+  const [allDayAppointments, setAllDayAppointments] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const meReady = !!me;
@@ -69,14 +69,14 @@ export default function RendezVousForm({
   useEffect(() => {
     if (fixedPatientId) {
       setLockedPatientId(fixedPatientId);
-      setLockedPatientLabel(`Patient #${fixedPatientId}`);
+      setLockedPatientLabel(`Patient`);
       return;
     }
     if (!meReady || !isPatientUser) return;
 
     patientService.me().then(res => {
       setLockedPatientId(res.data.id);
-      setLockedPatientLabel(`#${res.data.id} — ${res.data.nom} ${res.data.prenom}`);
+      setLockedPatientLabel(`${res.data.nom} ${res.data.prenom}`);
     }).catch(() => {});
   }, [fixedPatientId, isPatientUser, meReady]);
 
@@ -100,19 +100,41 @@ export default function RendezVousForm({
 
   // Fetch appointments for availability
   useEffect(() => {
-    if (!form.date || !form.medecin) {
-      setDayAppointments([]);
+    if (!form.date) {
+      setAllDayAppointments([]);
       return;
     }
     setLoadingSlots(true);
     rendezvousService.listByDate(form.date)
       .then(res => {
         const all = Array.isArray(res.data) ? res.data : (res.data?.results || []);
-        // Filter by selected doctor
-        setDayAppointments(all.filter(a => String(a.medecin) === String(form.medecin) && a.statut !== 'annule'));
+        setAllDayAppointments(all.filter(a => a.statut !== 'annule'));
       })
       .finally(() => setLoadingSlots(false));
-  }, [form.date, form.medecin]);
+  }, [form.date]);
+
+  // Appointments of the selected doctor OR selected patient (for the grid)
+  const dayAppointments = useMemo(() => {
+    return allDayAppointments.filter(a => 
+      (form.medecin && String(a.medecin) === String(form.medecin)) || 
+      (form.patient && String(a.patient) === String(form.patient))
+    );
+  }, [allDayAppointments, form.medecin, form.patient]);
+
+  // IDs of busy people at the currently selected 'form.time'
+  const busyMedecinIds = useMemo(() => {
+    if (!form.time) return [];
+    return allDayAppointments
+      .filter(a => new Date(a.date_heure).toTimeString().substring(0, 5) === form.time)
+      .map(a => String(a.medecin));
+  }, [allDayAppointments, form.time]);
+
+  const busyPatientIds = useMemo(() => {
+    if (!form.time) return [];
+    return allDayAppointments
+      .filter(a => new Date(a.date_heure).toTimeString().substring(0, 5) === form.time)
+      .map(a => String(a.patient));
+  }, [allDayAppointments, form.time]);
 
   // Calculate Slots
   const availableSlots = useMemo(() => {
@@ -145,6 +167,13 @@ export default function RendezVousForm({
     if (!form.patient) return setErr("Le patient est obligatoire.");
     if (!form.medecin) return setErr("Le médecin est obligatoire.");
     if (!form.date || !form.time) return setErr("La date et l'heure sont obligatoires.");
+
+    // Check if slot is taken (doctor or patient)
+    const isOccupied = dayAppointments.some(appt => {
+      const apptTime = new Date(appt.date_heure).toTimeString().substring(0, 5);
+      return apptTime === form.time;
+    });
+    if (isOccupied) return setErr("Ce créneau est déjà occupé par le médecin ou le patient.");
 
     setLoading(true);
     try {
@@ -188,7 +217,14 @@ export default function RendezVousForm({
               <select className="w-full bg-gray-50 border-gray-200 focus:border-[var(--primary)] focus:bg-white transition-all py-3 px-4 rounded-xl text-sm font-semibold text-gray-800 appearance-none cursor-pointer"
                 value={form.patient} onChange={e => set("patient", e.target.value)} disabled={loadingPatients}>
                 <option value="">{loadingPatients ? "Chargement..." : "-- choisir le patient --"}</option>
-                {patients.map(p => <option key={p.id} value={p.id}>#{p.id} — {p.nom} {p.prenom}</option>)}
+                {patients.map(p => {
+                  const isBusy = busyPatientIds.includes(String(p.id)) && String(lockedPatientId) !== String(p.id);
+                  return (
+                    <option key={p.id} value={p.id} disabled={isBusy}>
+                      {p.nom} {p.prenom} {isBusy ? " (Indisponible)" : ""}
+                    </option>
+                  );
+                })}
               </select>
               <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
             </div>
@@ -202,9 +238,15 @@ export default function RendezVousForm({
             <select className="w-full bg-gray-50 border-gray-200 focus:border-[var(--primary)] focus:bg-white transition-all py-3 px-4 rounded-xl text-sm font-semibold text-gray-800 appearance-none cursor-pointer"
               value={form.medecin} onChange={e => set("medecin", e.target.value)} disabled={loadingMedecins}>
               <option value="">{loadingMedecins ? "Chargement..." : "-- choisir le médecin --"}</option>
-              {medecins.map(m => (
-                <option key={m.id} value={m.id}>Dr. {m.first_name || m.last_name ? `${m.first_name || ""} ${m.last_name || ""}`.trim() : m.username}</option>
-              ))}
+              {medecins.map(m => {
+                const isBusy = busyMedecinIds.includes(String(m.id));
+                return (
+                  <option key={m.id} value={m.id} disabled={isBusy}>
+                    Dr. {m.first_name || m.last_name ? `${m.first_name || ""} ${m.last_name || ""}`.trim() : m.username}
+                    {isBusy ? " (Indisponible)" : ""}
+                  </option>
+                );
+              })}
             </select>
             <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
           </div>
@@ -216,6 +258,14 @@ export default function RendezVousForm({
           <input type="date" className="w-full bg-gray-50 border-gray-100 focus:border-[var(--primary)] focus:bg-white transition-all py-3 px-4 rounded-xl text-sm font-semibold text-gray-800"
             value={form.date} onChange={e => set("date", e.target.value)} disabled={lockDateTime} />
         </div>
+
+        {lockDateTime && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Heure *</label>
+            <input type="time" className="w-full bg-gray-50 border-gray-100 py-3 px-4 rounded-xl text-sm font-semibold text-gray-800 cursor-default"
+              value={form.time} readOnly />
+          </div>
+        )}
 
         {/* Duration Picker */}
         <div className="space-y-1.5">
@@ -231,42 +281,44 @@ export default function RendezVousForm({
         </div>
 
         {/* Time Slots Selection */}
-        <div className="md:col-span-2 space-y-3">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex justify-between items-center">
-            Horaires disponibles
-            {loadingSlots && <i className="fa-solid fa-circle-notch fa-spin text-primary"></i>}
-          </label>
-          
-          {!form.medecin || !form.date ? (
-            <div className="bg-gray-50 border border-dashed border-gray-200 p-6 rounded-2xl text-center text-gray-400 text-sm">
-              Sélectionnez un médecin et une date pour voir les créneaux
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-              {availableSlots.map(slot => (
-                <button
-                  key={slot.time}
-                  type="button"
-                  disabled={!slot.available || lockDateTime}
-                  onClick={() => set("time", slot.time)}
-                  className={`py-2.5 rounded-xl text-xs font-bold transition-all border-2 relative flex items-center justify-center gap-1 ${
-                    form.time === slot.time 
-                      ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-lg shadow-green-200 scale-110 z-10' 
-                      : !slot.available 
-                        ? 'bg-gray-50 text-gray-300 border-gray-50 cursor-not-allowed opacity-40' 
-                        : 'bg-white text-gray-600 border-gray-100 hover:border-[var(--primary)] hover:text-[var(--primary)] hover:scale-105'
-                  }`}
-                >
-                  {form.time === slot.time && <i className="fa-solid fa-check text-[10px]"></i>}
-                  {slot.time}
-                </button>
-              ))}
-            </div>
-          )}
-          {form.time && !availableSlots.find(s => s.time === form.time)?.available && (
-             <p className="text-[10px] text-orange-500 font-bold ml-1 italic">* Ce créneau a été réservé entre temps</p>
-          )}
-        </div>
+        {!lockDateTime && (
+          <div className="md:col-span-2 space-y-3">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1 flex justify-between items-center">
+              Horaires disponibles
+              {loadingSlots && <i className="fa-solid fa-circle-notch fa-spin text-primary"></i>}
+            </label>
+            
+            {!form.medecin || !form.date ? (
+              <div className="bg-gray-50 border border-dashed border-gray-200 p-6 rounded-2xl text-center text-gray-400 text-sm">
+                Sélectionnez un médecin et une date pour voir les créneaux
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {availableSlots.map(slot => (
+                  <button
+                    key={slot.time}
+                    type="button"
+                    disabled={!slot.available || lockDateTime}
+                    onClick={() => set("time", slot.time)}
+                    className={`py-2.5 rounded-xl text-xs font-bold transition-all border-2 relative flex items-center justify-center gap-1 ${
+                      form.time === slot.time 
+                        ? 'bg-[var(--primary)] text-white border-[var(--primary)] shadow-lg shadow-green-200 scale-110 z-10' 
+                        : !slot.available 
+                          ? 'bg-gray-50 text-gray-300 border-gray-50 cursor-not-allowed opacity-40' 
+                          : 'bg-white text-gray-600 border-gray-100 hover:border-[var(--primary)] hover:text-[var(--primary)] hover:scale-105'
+                    }`}
+                  >
+                    {form.time === slot.time && <i className="fa-solid fa-check text-[10px]"></i>}
+                    {slot.time}
+                  </button>
+                ))}
+              </div>
+            )}
+            {form.time && !availableSlots.find(s => s.time === form.time)?.available && (
+              <p className="text-[10px] text-orange-500 font-bold ml-1 italic">* Ce créneau a été réservé entre temps</p>
+            )}
+          </div>
+        )}
 
         {/* Motif */}
         <div className="md:col-span-2 space-y-1.5">

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Login from "./pages/Login.jsx";
+import { Toaster } from 'react-hot-toast';
 import PatientsList from "./pages/PatientListe";
 import PatientDetail from "./pages/PatientDetails";
 import AppLayout from "./components/AppLayout";
@@ -85,6 +86,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-right" reverseOrder={false} />
       <AppLayout>
         <Routes>
           <Route path="/login" element={<Login />} />

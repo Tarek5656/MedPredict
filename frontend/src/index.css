@@ -17,26 +17,26 @@
   --radius-btn: 48px;
 
   /* fallback theme (green par défaut) */
-  --primary: #48B39B;
-  --primary-hover: #2E8D78;
+  --primary: #2E8D78;
+  --primary-hover: #1F6354;
 
-  --shadow-sm: 0 40px 80px -20px rgba(72, 179, 155, 0.08);
-  --shadow-md: 0 40px 80px -10px rgba(72, 179, 155, 0.12);
-  --shadow-lg: 0 40px 80px rgba(72, 179, 155, 0.15);
+  --shadow-sm: 0 40px 80px -20px rgba(46, 141, 120, 0.08);
+  --shadow-md: 0 40px 80px -10px rgba(46, 141, 120, 0.12);
+  --shadow-lg: 0 40px 80px rgba(46, 141, 120, 0.15);
 
-  --focus-ring: rgba(72, 179, 155, 0.15);
+  --focus-ring: rgba(46, 141, 120, 0.15);
 }
 
 /* THEME: GREEN */
 :root[data-theme="green"] {
-  --primary: #48B39B;
-  --primary-hover: #2E8D78;
+  --primary: #2E8D78;
+  --primary-hover: #1F6354;
 
-  --shadow-sm: 0 40px 80px -20px rgba(72, 179, 155, 0.08);
-  --shadow-md: 0 40px 80px -10px rgba(72, 179, 155, 0.12);
-  --shadow-lg: 0 40px 80px rgba(72, 179, 155, 0.15);
+  --shadow-sm: 0 40px 80px -20px rgba(46, 141, 120, 0.08);
+  --shadow-md: 0 40px 80px -10px rgba(46, 141, 120, 0.12);
+  --shadow-lg: 0 40px 80px rgba(46, 141, 120, 0.15);
 
-  --focus-ring: rgba(72, 179, 155, 0.15);
+  --focus-ring: rgba(46, 141, 120, 0.15);
 }
 
 /* THEME: BLUE */
@@ -75,6 +75,18 @@
   --shadow-lg: 0 40px 80px rgba(245, 158, 11, 0.15);
 
   --focus-ring: rgba(245, 158, 11, 0.18);
+}
+
+:root[data-theme="cyan"] {
+  --primary: #06b6d4;
+  --primary-hover: #0891b2;
+  --primary-light: #ecfeff;
+
+  --shadow-sm: 0 40px 80px -20px rgba(6, 182, 212, 0.08);
+  --shadow-md: 0 40px 80px -10px rgba(6, 182, 212, 0.12);
+  --shadow-lg: 0 40px 80px rgba(6, 182, 212, 0.15);
+
+  --focus-ring: rgba(6, 182, 212, 0.18);
 }
 
 body {
@@ -260,16 +272,10 @@ tr:hover td {
   color: white;
 }
 
-:root[data-theme="yellow"] .card-hero {
-  color: #191c1e; /* Keep dark text for yellow theme for better contrast */
-}
+/* Contrast overrides for yellow theme removed as requested for patients */
 
 .text-primary-light {
   color: var(--primary-light);
-}
-
-:root[data-theme="yellow"] .text-primary-light {
-  color: rgba(25, 28, 30, 0.7); /* Subtle dark text for yellow theme */
 }
 
 @keyframes slideInRight {

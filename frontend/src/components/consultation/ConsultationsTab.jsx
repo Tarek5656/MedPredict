@@ -254,8 +254,7 @@ export default function ConsultationsTab({ patientId, canEdit, patient }) {
               <option value="">-- choisir --</option>
               {rdvOptions.map((r) => (
                 <option key={r.id} value={r.id}>
-                  #{r.id} — {new Date(r.date_heure).toLocaleString()} — {r.motif || "—"} (
-                  {r.statut_effectif || r.statut})
+                  {new Date(r.date_heure).toLocaleString()} — {r.motif || "—"} ({r.statut_effectif || r.statut})
                 </option>
               ))}
             </select>
@@ -308,9 +307,9 @@ export default function ConsultationsTab({ patientId, canEdit, patient }) {
               <div key={c.id} style={{ border: "1px solid #f3f4f6", borderRadius: 10, padding: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <b>
-                    Consultation #{c.id} — {new Date(c.date).toLocaleString()}
+                    Consultation du {new Date(c.date).toLocaleString()}
                   </b>
-                  <span style={{ opacity: 0.7 }}>RDV: {c.rendezvous ? `#${c.rendezvous}` : "—"}</span>
+                  <span style={{ opacity: 0.7 }}>{c.rendezvous ? "Liée à un RDV" : "—"}</span>
 
                   <button style={{ marginLeft: "auto" }} type="button" onClick={() => toggleExpanded(c)}>
                     {expandedId === c.id ? "Réduire" : "Ouvrir"}

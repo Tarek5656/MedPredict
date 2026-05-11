@@ -120,8 +120,8 @@ export default function CalendrierJour() {
     return !rdvIntervals.some((r) => overlaps(slotStart, slotEnd, r._start, r._end));
   };
 
-  const findRdvStartingHere = (slotStart) => {
-    return rdvIntervals.find((r) => r._start.getTime() === slotStart.getTime());
+  const findAllRdvStartingHere = (slotStart) => {
+    return rdvIntervals.filter((r) => r._start.getTime() === slotStart.getTime());
   };
 
   const isPastSlot = (slotStart) => slotStart.getTime() < Date.now();
@@ -176,8 +176,7 @@ export default function CalendrierJour() {
 
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           {slots.map((slotStart) => {
-            const rdv = findRdvStartingHere(slotStart);
-            const free = isSlotFree(slotStart);
+            const rdvs = findAllRdvStartingHere(slotStart);
             const past = isPastSlot(slotStart);
 
             return (
@@ -189,29 +188,36 @@ export default function CalendrierJour() {
                   alignItems: "center",
                   borderTop: "1px solid var(--border-color)",
                   padding: "10px 12px",
-                  background: rdv ? "rgba(72,179,155,0.10)" : "transparent",
-                  opacity: free || rdv ? 1 : 0.55,
+                  background: rdvs.length > 0 ? "rgba(72,179,155,0.10)" : "transparent",
+                  opacity: 1,
                 }}
               >
                 <div style={{ fontFamily: "monospace" }}>
                   {pad(slotStart.getHours())}:{pad(slotStart.getMinutes())}
                 </div>
 
-                <div>
-                  {rdv ? (
-                    <>
-                      <div style={{ fontWeight: 800 }}>
-                        {rdv.patient_nom} {rdv.patient_prenom}
+                <div className="space-y-2">
+                  {rdvs.length > 0 ? (
+                    rdvs.map(rdv => (
+                      <div key={rdv.id} className="p-2 rounded-lg bg-white/50 border border-white/20">
+                        <div style={{ fontWeight: 800 }}>
+                          {rdv.patient_nom} {rdv.patient_prenom}
+                        </div>
+                        <div style={{ opacity: 0.8, fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--primary)", fontWeight: 600 }}>
+                            Dr. {rdv.medecin_nom || rdv.medecin_prenom ? `${rdv.medecin_prenom || ""} ${rdv.medecin_nom || ""}`.trim() : `Doc #${rdv.medecin}`}
+                          </span>
+                          {" • "}{rdv.motif || "—"} • {rdv.duree_minutes} min
+                          {rdv.statut_effectif === 'termine' ? (
+                            <span style={{ marginLeft: 8, fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, background: '#dcfce7', color: '#166534', fontWeight: 800, textTransform: 'uppercase' }}>Terminé</span>
+                          ) : rdv.statut_effectif === 'annule' ? (
+                            <span style={{ marginLeft: 8, fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4, background: '#fee2e2', color: '#991b1b', fontWeight: 800, textTransform: 'uppercase' }}>Annulé</span>
+                          ) : null}
+                        </div>
                       </div>
-                      <div style={{ opacity: 0.8, fontSize: "0.85rem" }}>
-                        <span style={{ color: "var(--primary)", fontWeight: 600 }}>
-                          Dr. {rdv.medecin_nom || rdv.medecin_prenom ? `${rdv.medecin_prenom || ""} ${rdv.medecin_nom || ""}`.trim() : `Doc #${rdv.medecin}`}
-                        </span>
-                        {" • "}{rdv.motif || "—"} • {rdv.duree_minutes} min
-                      </div>
-                    </>
+                    ))
                   ) : (
-                    <div style={{ opacity: 0.75 }}>
+                    <div style={{ opacity: 0.75, paddingLeft: "8px" }}>
                       {past ? "Indisponible" : "Libre"}
                     </div>
                   )}
@@ -219,7 +225,7 @@ export default function CalendrierJour() {
 
                 {(!isMedecin) ? (
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                    {!rdv && free && !past ? (
+                    {!past ? (
                       <button type="button" onClick={() => openAdd(slotStart)}>
                         + Ajouter
                       </button>
