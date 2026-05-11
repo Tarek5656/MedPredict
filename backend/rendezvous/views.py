@@ -15,7 +15,7 @@ from django.utils.dateparse import parse_date
 from django.utils import timezone
 from datetime import datetime, time
 
-from notifications.services import notify_group
+from notifications.services import notify_group, notify_user
 from notifications.models import Notification
 
 class IsSecretaireOrPatient(BasePermission):
@@ -52,8 +52,11 @@ class RendezVousViewSet(viewsets.ModelViewSet):
 
             if "PATIENT" in groups:
                 queryset = qs.filter(patient__user=user)
+            elif "MEDECIN" in groups and "SECRETAIRE" not in groups and "ADMIN" not in groups:
+                # C'est un médecin pur : il ne voit que ses rendez-vous
+                queryset = qs.filter(medecin=user)
             else:
-                queryset = qs  # secretaire/admin/medecin
+                queryset = qs  # secretaire/admin
 
         date_str = self.request.query_params.get("date")
         if date_str:
@@ -94,6 +97,31 @@ class RendezVousViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="annuler")
     def annuler(self, request, pk=None):
         rdv = self.get_object()
+        
+        # 1. Vérification du délai d'annulation (2 heures)
+        if rdv.date_heure - timezone.now() < timedelta(hours=2):
+            return Response({
+                "detail": "Annulation impossible moins de 2 heures avant le rendez-vous. Veuillez contacter la clinique par téléphone."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Restriction Patient: Max 2 annulations par mois
+        user = request.user
+        groups = set(user.groups.values_list("name", flat=True))
+        if "PATIENT" in groups and not user.is_superuser:
+            now = timezone.now()
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            cancel_count = RendezVous.objects.filter(
+                patient=rdv.patient,
+                statut="annule",
+                updated_at__gte=month_start
+            ).count()
+            
+            if cancel_count >= 2:
+                return Response({
+                    "detail": "Limite d'annulation atteinte (2 par mois). Veuillez contacter la clinique pour toute demande particulière."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
         rdv.statut = "annule"
         rdv.save(update_fields=["statut", "updated_at"])
         
@@ -112,6 +140,27 @@ class RendezVousViewSet(viewsets.ModelViewSet):
                 url=url,
             )
 
+        return Response(self.get_serializer(rdv).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path="refuser")
+    def refuser(self, request, pk=None):
+        rdv = self.get_object()
+        if rdv.statut != "en_attente":
+            return Response({"detail": "Seuls les rendez-vous en attente peuvent être refusés."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        rdv.statut = "annule"
+        rdv.save(update_fields=["statut", "updated_at"])
+
+        if rdv.patient.user:
+            dt_local = timezone.localtime(rdv.date_heure)
+            notify_user(
+                rdv.patient.user,
+                type=Notification.Type.RDV_CANCEL,
+                title="Rendez-vous refusé",
+                body=f"Malheureusement, votre demande pour le {dt_local.strftime('%d/%m/%Y à %H:%M')} a été refusée.",
+                url="/rendezvous"
+            )
+        
         return Response(self.get_serializer(rdv).data, status=status.HTTP_200_OK)
 
     def get_permissions(self):
@@ -152,18 +201,22 @@ class RendezVousViewSet(viewsets.ModelViewSet):
         return super().retrieve(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-            rdv = serializer.save()
-
             # Détecter si l'auteur est un patient (groupe PATIENT)
             groups = set(self.request.user.groups.values_list("name", flat=True))
             created_by_patient = "PATIENT" in groups
 
+            # Si c'est un patient, le statut est obligatoirement "en_attente"
+            if created_by_patient:
+                rdv = serializer.save(statut="en_attente")
+            else:
+                rdv = serializer.save()
+
             if created_by_patient:
                 dt_local = timezone.localtime(rdv.date_heure)
-                title = "Nouveau rendez-vous ajouté"
-                body = f"{rdv.patient.nom} {rdv.patient.prenom} — {dt_local.strftime('%d/%m/%Y à %H:%M')}"
-                url = f"/patients/{rdv.patient_id}"   # adapte à ta route front
-
+                title = "Demande de rendez-vous"
+                body = f"{rdv.patient.nom} {rdv.patient.prenom} sollicite un RDV pour le {dt_local.strftime('%d/%m/%Y à %H:%M')}"
+                url = "/rendezvous"   # On renvoie vers la liste des RDV
+                
                 notify_group(
                     "SECRETAIRE",
                     type=Notification.Type.RDV_CREATED,
@@ -171,3 +224,24 @@ class RendezVousViewSet(viewsets.ModelViewSet):
                     body=body,
                     url=url,
                 )
+
+    @action(detail=True, methods=["post"], url_path="approuver")
+    def approuver(self, request, pk=None):
+        rdv = self.get_object()
+        if rdv.statut != "en_attente":
+            return Response({"detail": "Seuls les rendez-vous en attente peuvent être approuvés."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        rdv.statut = "planifie"
+        rdv.save(update_fields=["statut", "updated_at"])
+        
+        if rdv.patient.user:
+            dt_local = timezone.localtime(rdv.date_heure)
+            notify_user(
+                rdv.patient.user,
+                type=Notification.Type.RDV_CREATED,
+                title="Rendez-vous accepté !",
+                body=f"Votre rendez-vous pour le {dt_local.strftime('%d/%m/%Y à %H:%M')} a été validé par la clinique.",
+                url="/rendezvous"
+            )
+        
+        return Response(self.get_serializer(rdv).data, status=status.HTTP_200_OK)

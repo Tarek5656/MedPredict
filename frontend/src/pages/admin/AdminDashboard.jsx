@@ -78,7 +78,7 @@ export default function AdminDashboard() {
     if (roles.includes("ADMIN")) return <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">Admin</span>;
     if (roles.includes("MEDECIN")) return <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">Médecin</span>;
     if (roles.includes("SECRETAIRE")) return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Secrétaire</span>;
-    if (roles.includes("PATIENT")) return <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">Patient</span>;
+    if (roles.includes("PATIENT")) return <span className="px-3 py-1 bg-cyan-500 text-white rounded-full text-xs font-bold">Patient</span>;
     return <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-bold">Utilisateur</span>;
   };
 
@@ -100,34 +100,68 @@ export default function AdminDashboard() {
   const pieData = stats ? [
     { name: "Médecins", value: stats.roles_distribution.medecins, color: "#3B82F6" },
     { name: "Secrétaires", value: stats.roles_distribution.secretaires, color: "#10B981" },
-    { name: "Patients", value: stats.roles_distribution.patients, color: "#F59E0B" },
+    { name: "Patients", value: stats.roles_distribution.patients, color: "#06b6d4" },
     { name: "Admins", value: stats.roles_distribution.admins, color: "#EF4444" },
   ].filter(d => d.value > 0) : [];
+
+  const exportToCSV = () => {
+    const listToExport = filteredUsers;
+    if (!listToExport.length) return;
+    
+    const headers = ["ID", "Username", "Prenom", "Nom", "Email", "Roles", "Date Inscription", "Derniere Connexion", "Statut"];
+    const rows = listToExport.map(u => [
+      u.id, 
+      u.username, 
+      u.first_name || "-", 
+      u.last_name || "-", 
+      u.email || "-", 
+      u.roles.join('; '), 
+      new Date(u.date_joined).toLocaleString(),
+      u.last_login ? new Date(u.last_login).toLocaleString() : "Jamais",
+      u.is_active ? "Actif" : "Suspendu"
+    ]);
+    
+    // Utilisation d'un séparateur point-virgule pour Excel FR
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(";") + "\n"
+      + rows.map(e => e.join(";")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `medpredict_users_${roleFilter.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       
       {/* 🌟 Header with Mesh Gradient Style */}
-      <div className="relative rounded-3xl p-8 overflow-hidden text-white shadow-lg" 
+      <div className="relative rounded-3xl p-6 md:p-8 overflow-hidden text-white shadow-lg" 
            style={{ background: "linear-gradient(135deg, var(--primary) 0%, #2563EB 100%)" }}>
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-10 w-40 h-40 bg-blue-300 opacity-20 rounded-full blur-2xl"></div>
         
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h1 className="text-4xl font-extrabold mb-2">Administration Système</h1>
-            <p className="opacity-90 font-medium">Vue d'ensemble et contrôle en temps réel de MedPredict.</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-2">Administration Système</h1>
+            <p className="opacity-90 font-medium text-sm md:text-base">Vue d'ensemble et contrôle en temps réel de MedPredict.</p>
           </div>
-          <div className="flex gap-3">
-            <button className="bg-white/20 hover:bg-white/30 border border-white/30 text-white shadow-none transition-all">
-              <i className="fa-solid fa-download"></i> Exporter
+          <div className="flex flex-wrap gap-3 w-full md:w-auto">
+            <button 
+              onClick={exportToCSV}
+              className="flex-1 md:flex-none bg-white/20 hover:bg-white/30 border border-white/30 text-white shadow-none transition-all px-4 py-3 md:py-2 text-sm"
+            >
+              <i className="fa-solid fa-download"></i> <span className="inline">Exporter</span>
             </button>
             <button 
               onClick={() => setShowModal(true)}
-              className="bg-white text-[var(--primary)] hover:bg-gray-50 shadow-lg"
+              className="flex-1 md:flex-none bg-white text-[var(--primary)] hover:bg-gray-50 shadow-lg px-4 py-3 md:py-2 text-sm"
             >
-              <i className="fa-solid fa-plus"></i> Nouvel Utilisateur
+              <i className="fa-solid fa-plus"></i> <span className="inline">Nouveau</span>
             </button>
           </div>
         </div>
@@ -145,10 +179,10 @@ export default function AdminDashboard() {
               </div>
               <p className="text-3xl font-extrabold text-gray-800">{stats?.roles_distribution.medecins}</p>
             </div>
-            <div className="card border-l-4 border-yellow-500 hover:shadow-lg transition-all hover:-translate-y-1">
+            <div className="card border-l-4 border-cyan-500 hover:shadow-lg transition-all hover:-translate-y-1">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-gray-500 text-xs tracking-wider uppercase">Total Patients</h3>
-                <div className="p-2 bg-yellow-50 text-yellow-500 rounded-xl"><i className="fa-solid fa-hospital-user fa-lg"></i></div>
+                <div className="p-2 bg-cyan-50 text-cyan-500 rounded-xl"><i className="fa-solid fa-hospital-user fa-lg"></i></div>
               </div>
               <p className="text-3xl font-extrabold text-gray-800">{stats?.roles_distribution.patients}</p>
             </div>
@@ -208,9 +242,9 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center border-b border-gray-700 pb-2">
                 <span className="text-sm text-gray-400">Moteur IA (Prédictions)</span>
                 {health?.ai_service === "Online" ? (
-                  <span className="flex items-center text-green-400 text-sm font-bold"><i className="fa-solid fa-circle text-[8px] mr-2 animate-pulse"></i> Online</span>
+                  <span className="flex items-center text-green-400 text-sm font-bold"><i className="fa-solid fa-circle text-[8px] mr-2 animate-pulse"></i> En ligne</span>
                 ) : (
-                  <span className="flex items-center text-red-400 text-sm font-bold"><i className="fa-solid fa-triangle-exclamation mr-1"></i> Offline</span>
+                  <span className="flex items-center text-red-400 text-sm font-bold"><i className="fa-solid fa-triangle-exclamation mr-1"></i> Hors ligne</span>
                 )}
               </div>
               <div className="flex justify-between items-center border-b border-gray-700 pb-2">

@@ -6,6 +6,7 @@ from datetime import timedelta
 
 class RendezVous(models.Model):
     class Statut(models.TextChoices):
+        EN_ATTENTE = "en_attente"
         PLANIFIE = "planifie"
         ANNULE = "annule"
         TERMINER = "termine"
@@ -36,6 +37,8 @@ class RendezVous(models.Model):
         """
         if self.statut == "annule":
             return "annule"
+        if self.statut == "en_attente":
+            return "en_attente"
         if timezone.now() >= self.end_datetime:
             return "termine"
         return "planifie"

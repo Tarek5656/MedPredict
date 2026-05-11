@@ -1,33 +1,22 @@
 import React, { useEffect, useState } from "react";
 import rendezvousService from "../../services/rendezvousService";
-import patientService from "../../services/patientService";
 import { extractApiError } from "../../utils/format";
+import Modal from "../../components/Modal";
+import RendezVousForm from "../../components/rendezvous/RendezVousForm";
 
 export default function RendezVousListe() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
-  const [formExpanded, setFormExpanded] = useState(false);
-  const [patientId, setPatientId] = useState(null);
-  const [creating, setCreating] = useState(false);
-
-  const [form, setForm] = useState({
-      date_heure: "",
-      duree_minutes: 30,
-      motif: "",
-      statut: "planifie",
-    });
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const load = async () => {
     setErr(null);
     setLoading(true);
     try {
       const res = await rendezvousService.me();
-      const pRes = await patientService.me();
-      setPatientId(pRes.data.id);
-
       const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-      setItems(data);
+      setItems(data.sort((a, b) => new Date(b.date_heure) - new Date(a.date_heure)));
     } catch (e) {
       setErr(extractApiError(e));
     } finally {
@@ -39,33 +28,34 @@ export default function RendezVousListe() {
     load();
   }, []);
 
-  const createRdv = async (e) => {
-    e.preventDefault();
-    setErr(null);
-    setCreating(true);
-    try {
-      if (!form.date_heure) throw new Error("Choisis une date/heure.");
-
-      await rendezvousService.create({
-        patient: Number(patientId),
-        date_heure: form.date_heure,
-        duree_minutes: Number(form.duree_minutes),
-        motif: form.motif,
-        statut: form.statut,
-      });
-
-      setForm({ date_heure: "", duree_minutes: 30, motif: "", statut: "planifie" });
-      setFormExpanded(false); // ✅ refermer après création (optionnel)
-      await load();
-    } catch (e2) {
-      setErr(extractApiError(e2));
-    } finally {
-      setCreating(false);
-    }
+  const handleCreated = () => {
+    setIsModalOpen(false);
+    load();
   };
 
   const cancelRdv = async (rdvId) => {
-    if (!window.confirm("Annuler ce rendez-vous ?")) return;
+    // Calculer le nombre d'annulations ce mois-ci
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const cancelsThisMonth = items.filter(rdv => {
+      const isAnnule = (rdv.statut_effectif || rdv.statut) === 'annule';
+      if (!isAnnule) return false;
+      
+      // On se base sur la date de mise à jour ou de création si disponible
+      // Pour faire simple, on vérifie si le RDV annulé était prévu ce mois-ci
+      const rdvDate = new Date(rdv.date_heure);
+      return rdvDate.getMonth() === currentMonth && rdvDate.getFullYear() === currentYear;
+    }).length;
+
+    let confirmMsg = "Voulez-vous vraiment annuler ce rendez-vous ?";
+    if (cancelsThisMonth === 1) {
+      confirmMsg = "Attention : Ceci est votre 2ème annulation ce mois-ci. Vous ne pourrez plus annuler de rendez-vous après celui-ci jusqu'au mois prochain. Confirmer ?";
+    }
+
+    if (!window.confirm(confirmMsg)) return;
+    
     setErr(null);
     try {
       await rendezvousService.annuler(rdvId);
@@ -75,39 +65,22 @@ export default function RendezVousListe() {
     }
   };
 
-  const canCancel = (rdv) => {
-    const statut = rdv.statut_effectif || rdv.statut;
-    return statut === "planifie";
-  };
-
-  const resetForm = () => {
-    setErr(null);
-    setForm({
-      date_heure: "",
-      duree_minutes: 30,
-      motif: "",
-      statut: "planifie",
-    });
-    setFormExpanded(false);
-  };
-
   return (
-    <div className="card border border-gray-100 shadow-sm mt-8">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold flex items-center gap-3 text-gray-800">
+    <div className="card border border-gray-100 shadow-sm mt-8 animate-fade-in">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-2xl font-bold flex items-center gap-3 text-gray-800">
           <i className="fa-regular fa-calendar-check text-primary"></i>
-          Rendez-vous
+          Mes Rendez-vous
         </h2>
 
         <div className="flex gap-3">
           <button 
             type="button" 
-            onClick={() => setFormExpanded((v) => !v)}
-            className={formExpanded ? "outline" : ""}
-            style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[var(--primary)] text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-green-100 hover:scale-105 transition-all flex items-center gap-2"
           >
-            <i className={`fa-solid ${formExpanded ? "fa-minus" : "fa-plus"}`}></i>
-            {formExpanded ? "Réduire" : "Nouveau RDV"}
+            <i className="fa-solid fa-plus"></i>
+            Demander un rendez-vous
           </button>
 
           <button 
@@ -117,115 +90,104 @@ export default function RendezVousListe() {
             style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}
           >
             <i className={`fa-solid fa-arrows-rotate ${loading ? "fa-spin" : ""}`}></i>
-            Rafraîchir
+            Actualiser
           </button>
         </div>
       </div>
 
-      {err && <p style={{ color: "crimson" }}>{err}</p>}
+      {err && <div className="badge badge-error w-full p-4 mb-6">{err}</div>}
 
-      {/* ✅ Formulaire repliable */}
-      {formExpanded ? (
-        <form onSubmit={createRdv} style={{ marginTop: 10, display: "grid", gap: 10 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label>Date / heure</label>
-              <input
-                type="datetime-local"
-                style={{ width: "100%" }}
-                value={form.date_heure}
-                onChange={(e) => setForm((s) => ({ ...s, date_heure: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <label>Durée (minutes)</label>
-              <select
-                style={{ width: "100%" }}
-                value={String(form.duree_minutes ?? 30)}
-                onChange={(e) => setForm((s) => ({ ...s, duree_minutes: Number(e.target.value) }))}
+      {loading ? (
+        <div className="flex justify-center p-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <div className="overflow-hidden">
+          {items.length === 0 ? (
+            <div className="p-16 text-center text-gray-500 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+              <i className="fa-regular fa-calendar-xmark text-4xl mb-4 opacity-20"></i>
+              <p className="text-lg font-medium text-gray-400">Vous n'avez aucun rendez-vous planifié.</p>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="text-primary font-bold mt-4 hover:underline"
               >
-                <option value="15">15 min</option>
-                <option value="30">30 min</option>
-              </select>
+                Prendre mon premier rendez-vous →
+              </button>
             </div>
-          </div>
-
-          <div>
-            <label>Motif</label>
-            <input
-              style={{ width: "100%" }}
-              value={form.motif}
-              onChange={(e) => setForm((s) => ({ ...s, motif: e.target.value }))}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <button disabled={creating}>{creating ? "Création..." : "Créer RDV"}</button>
-
-            <button type="button" onClick={resetForm} disabled={creating}>
-              Annuler
-            </button>
-          </div>
-        </form>
-      ) : null}
-
-      {loading ? <p>Chargement...</p> : null}
-
-      <div style={{ marginTop: 10 }}>
-        {items.length === 0 ? (
-          <div className="p-12 text-center text-gray-500 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-            <i className="fa-regular fa-calendar-times text-3xl mb-3 opacity-20"></i>
-            <p className="font-medium text-gray-400">Aucun rendez-vous planifié pour ce patient.</p>
-          </div>
-        ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Date & Heure</th>
-                  <th>Statut</th>
-                  <th>Motif</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {items.map((rdv) => (
-                  <tr key={rdv.id}>
-                    <td>#{rdv.id}</td>
-                    <td>{new Date(rdv.date_heure).toLocaleString()}</td>
-                    <td>
-                      <span className={`badge ${
-                        (rdv.statut_effectif || rdv.statut) === 'termine' ? 'badge-success' : 
-                        (rdv.statut_effectif || rdv.statut) === 'annule' ? 'badge-error' : 'badge-warning'
-                      }`}>
-                        {rdv.statut_effectif || rdv.statut}
-                      </span>
-                    </td>
-                    <td>{rdv.motif || "—"}</td>
-                    <td>
-                      {(rdv.statut_effectif || rdv.statut) === "planifie" ? (
-                        <button 
-                          className="danger" 
-                          style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}
-                          onClick={() => cancelRdv(rdv.id)}
-                        >
-                          Annuler
-                        </button>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
+          ) : (
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date & Heure</th>
+                    <th>Statut</th>
+                    <th>Médecin</th>
+                    <th>Motif</th>
+                    <th className="text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
 
-      </div>
+                <tbody>
+                  {items.map((rdv) => (
+                    <tr key={rdv.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="font-medium text-gray-900">
+                        {new Date(rdv.date_heure).toLocaleString('fr-FR', { 
+                          weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
+                        })}
+                      </td>
+                      <td>
+                        <span className={`badge ${
+                          (rdv.statut_effectif || rdv.statut) === 'termine' ? 'badge-success' : 
+                          (rdv.statut_effectif || rdv.statut) === 'annule' ? 'badge-error' : 
+                          (rdv.statut_effectif || rdv.statut) === 'en_attente' ? 'bg-orange-100 text-orange-700' :
+                          'badge-warning'
+                        }`}>
+                          {(rdv.statut_effectif || rdv.statut) === 'termine' ? 'Terminé' : 
+                           (rdv.statut_effectif || rdv.statut) === 'annule' ? 'Annulé' : 
+                           (rdv.statut_effectif || rdv.statut) === 'en_attente' ? 'En attente de validation' : 'Planifié'}
+                        </span>
+                      </td>
+                      <td className="font-semibold text-gray-700">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs">
+                            <i className="fa-solid fa-user-doctor"></i>
+                          </div>
+                          Dr. {rdv.medecin_nom || "Yahyaoui"}
+                        </div>
+                      </td>
+                      <td className="text-gray-500">{rdv.motif || "—"}</td>
+                      <td className="text-right">
+                        {(rdv.statut_effectif || rdv.statut) === "planifie" ? (
+                          <button 
+                            className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                            onClick={() => cancelRdv(rdv.id)}
+                          >
+                            Annuler
+                          </button>
+                        ) : (
+                          <span className="text-gray-300 text-xs">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODALE DE PRISE DE RENDEZ-VOUS (Même composant que la secrétaire) */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title="Prendre un nouveau rendez-vous"
+        maxWidth="max-w-2xl"
+      >
+        <div className="py-4">
+            <RendezVousForm onSuccess={handleCreated} />
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -11,7 +11,7 @@ export const themeFromMe = (me) => {
   if (me?.is_superuser) return "red";
   if (groups.includes("MEDECIN")) return "blue";
   if (groups.includes("SECRETAIRE")) return "green";
-  if (groups.includes("PATIENT")) return "yellow";
+  if (groups.includes("PATIENT")) return "cyan";
 
   return "green";
 };

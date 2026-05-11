@@ -190,13 +190,6 @@ const saveDossier = async () => {
               <h1 style={{ margin: 0, fontSize: "1.75rem", color: "var(--text-main)", letterSpacing: "-0.02em", fontWeight: 700 }}>
                 {patient.prenom} {patient.nom}
               </h1>
-              <span style={{ 
-                background: "var(--primary-light)", color: "var(--primary)", 
-                padding: "4px 10px", borderRadius: 999, fontSize: "0.8rem", fontWeight: 700,
-                border: "1px solid rgba(0,0,0,0.05)"
-              }}>
-                #{patient.id}
-              </span>
             </div>
 
             {/* Demographic Subtitle */}

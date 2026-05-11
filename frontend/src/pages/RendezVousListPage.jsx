@@ -147,6 +147,7 @@ export default function RendezVousListPage() {
                 onChange={(e) => setFilters((s) => ({ ...s, statut: e.target.value, page: 1 }))}
               >
                 <option value="">Tous</option>
+                <option value="en_attente">En attente</option>
                 <option value="planifie">Planifié</option>
                 <option value="annule">Annulé</option>
                 <option value="termine">Terminé</option>
@@ -177,6 +178,7 @@ export default function RendezVousListPage() {
                     <th>Date</th>
                     <th>Statut</th>
                     <th>Patient</th>
+                    <th>Médecin</th>
                     <th>Motif</th>
                     <th></th>
                   </tr>
@@ -186,17 +188,58 @@ export default function RendezVousListPage() {
                     <tr key={rdv.id}>
                       <td>{rdv.date || ""} {rdv.heure || ""} {(rdv.date_heure && new Date(rdv.date_heure).toLocaleString()) || ""}</td>
                       <td>
-                        <span className={`badge ${rdv.statut === "termine" || rdv.statut_effectif === "termine" ? "badge-success" : rdv.statut === "annule" || rdv.statut_effectif === "annule" ? "badge-error" : "badge-warning"}`}>
-                          {rdv.statut_effectif || rdv.statut}
+                        <span className={`badge ${
+                          (rdv.statut_effectif || rdv.statut) === 'termine' ? 'badge-success' : 
+                          (rdv.statut_effectif || rdv.statut) === 'annule' ? 'badge-error' : 
+                          (rdv.statut_effectif || rdv.statut) === 'en_attente' ? 'bg-orange-100 text-orange-700' :
+                          'badge-warning'
+                        }`}>
+                          {(rdv.statut_effectif || rdv.statut) === 'termine' ? 'Terminé' : 
+                           (rdv.statut_effectif || rdv.statut) === 'annule' ? 'Annulé' : 
+                           (rdv.statut_effectif || rdv.statut) === 'en_attente' ? 'En attente' : 'Planifié'}
                         </span>
                       </td>
                       <td>{rdv.patient_nom || ""} {rdv.patient_prenom || ""}</td>
+                      <td className="font-semibold text-gray-700">Dr. {rdv.medecin_nom || ""}</td>
                       <td>{rdv.motif || "—"}</td>
                       <td style={{ textAlign: "right" }}>
-                        <Link to={`/patients/${rdv.patient}`} style={{
-                          background: "var(--bg-color)", padding: "6px 16px", borderRadius: "2rem",
-                          fontSize: "0.85rem", fontWeight: 600
-                        }}>Patient →</Link>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          {(rdv.statut_effectif || rdv.statut) === "en_attente" && (isAdmin || isSecretaire) && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await rendezvousService.approuver(rdv.id);
+                                    load();
+                                  } catch (e) {
+                                    alert(extractApiError(e));
+                                  }
+                                }}
+                                className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-600 transition-all"
+                              >
+                                Accepter
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm("Refuser cette demande ?")) return;
+                                  try {
+                                    await rendezvousService.refuser(rdv.id);
+                                    load();
+                                  } catch (e) {
+                                    alert(extractApiError(e));
+                                  }
+                                }}
+                                className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 transition-all"
+                              >
+                                Refuser
+                              </button>
+                            </>
+                          )}
+                          <Link to={`/patients/${rdv.patient}`} style={{
+                            background: "var(--bg-color)", padding: "6px 16px", borderRadius: "2rem",
+                            fontSize: "0.85rem", fontWeight: 600
+                          }}>Patient →</Link>
+                        </div>
                       </td>
                     </tr>
                   ))}

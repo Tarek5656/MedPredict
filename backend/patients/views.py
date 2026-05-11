@@ -7,9 +7,13 @@ from django.contrib.auth.password_validation import validate_password
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Patient, DossierMedical
-from .serializers import PatientSerializer, DossierMedicalSerializer
+from .serializers import PatientSerializer, DossierMedicalSerializer, MyTokenObtainPairSerializer
 from .permissions import IsSecretaire, IsMedecin
 from .filters import PatientFilter
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
 
 @api_view(["GET"])
