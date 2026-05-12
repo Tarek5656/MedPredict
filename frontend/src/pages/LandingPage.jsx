@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { applyTheme } from '../utils/theme';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [showHelp, setShowHelp] = useState(false);
+
+  useEffect(() => {
+    // Reset theme to default on landing page if not logged in
+    if (!localStorage.getItem("access_token")) {
+      applyTheme("green");
+    }
+  }, []);
 
   const contactInfo = {
     fixe: "+212 522 20 20 20",

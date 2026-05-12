@@ -7,7 +7,8 @@ import Modal from "../components/Modal";
 import userService from "../services/userService";
 
 const DEFAULT_FILTERS = {
-  statut: "",
+  statut: [], 
+  medecin: [], // Multi-sélection médecins
   q: "",
   page: 1,
 };
@@ -23,6 +24,7 @@ export default function RendezVousListPage() {
   const [hasPrev, setHasPrev] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [medecins, setMedecins] = useState([]);
   const [err, setErr] = useState(null);
 
   const [me, setMe] = useState(null);
@@ -41,8 +43,13 @@ export default function RendezVousListPage() {
     setLoading(true);
     try {
       const params = { page: filters.page };
-      if (filters.statut) params.statut = filters.statut;
-      if (filters.patient) params.patient = filters.patient;
+      if (filters.statut.length > 0) {
+        // On envoie les statuts séparés par des virgules
+        params.statut = filters.statut.join(",");
+      }
+      if (filters.medecin.length > 0) {
+        params.medecin = filters.medecin.join(",");
+      }
       if (filters.q) params.q = filters.q;
 
       const [meRes] = await Promise.all([
@@ -80,9 +87,21 @@ export default function RendezVousListPage() {
   };
 
   useEffect(() => {
+    const fetchMedecins = async () => {
+      try {
+        const res = await userService.medecins();
+        setMedecins(res.data || []);
+      } catch (err) {
+        console.error("Erreur chargement médecins", err);
+      }
+    };
+    fetchMedecins();
+  }, []);
+
+  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.statut, filters.patient, filters.q]);
+  }, [filters.page, filters.statut, filters.medecin, filters.q]);
 
   const resetFilters = () => setFilters(DEFAULT_FILTERS);
 
@@ -138,30 +157,110 @@ export default function RendezVousListPage() {
             </div>
           </div>
   
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
             <div>
-              <label>Statut</label>
-              <select
-                style={{ width: "100%" }}
-                value={filters.statut}
-                onChange={(e) => setFilters((s) => ({ ...s, statut: e.target.value, page: 1 }))}
-              >
-                <option value="">Tous</option>
-                <option value="en_attente">En attente</option>
-                <option value="planifie">Planifié</option>
-                <option value="annule">Annulé</option>
-                <option value="termine">Terminé</option>
-              </select>
+              <label style={{ marginBottom: '8px', display: 'block' }}>Filtrer par statut</label>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {[
+                  { id: 'en_attente', label: 'En attente', class: 'bg-orange-100 text-orange-700', activeClass: 'bg-orange-500 text-white' },
+                  { id: 'planifie', label: 'Planifié', class: 'bg-blue-100 text-blue-700', activeClass: 'bg-blue-600 text-white' },
+                  { id: 'termine', label: 'Terminé', class: 'bg-green-100 text-green-700', activeClass: 'bg-green-600 text-white' },
+                  { id: 'annule', label: 'Annulé', class: 'bg-red-100 text-red-700', activeClass: 'bg-red-600 text-white' },
+                ].map((s) => {
+                  const isActive = filters.statut.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setFilters(prev => {
+                          const newStatut = prev.statut.includes(s.id)
+                            ? prev.statut.filter(id => id !== s.id)
+                            : [...prev.statut, s.id];
+                          return { ...prev, statut: newStatut, page: 1 };
+                        });
+                      }}
+                      style={{ 
+                        padding: '8px 16px', 
+                        borderRadius: '999px', 
+                        fontSize: '0.85rem', 
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                        opacity: filters.statut.length > 0 && !isActive ? 0.6 : 1
+                      }}
+                      className={isActive ? s.activeClass : s.class}
+                    >
+                      {s.label}
+                      {isActive && <i className="fa-solid fa-check" style={{ marginLeft: '8px', fontSize: '0.75rem' }}></i>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
   
+            {/* Filtrage par médecin : Visible pour Admin, Secrétaire ET Patient */}
+            {(isAdmin || isSecretaire || !isMedecin) && medecins.length > 0 && (
+              <div style={{ marginTop: '8px' }}>
+                <label style={{ marginBottom: '8px', display: 'block' }}>Filtrer par médecin</label>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {medecins.map((m) => {
+                    const isActive = filters.medecin.includes(String(m.id));
+                    const displayName = m.first_name || m.last_name 
+                      ? `Dr. ${m.first_name || ""} ${m.last_name || ""}`.trim() 
+                      : `Dr. ${m.username}`;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setFilters(prev => {
+                            const newMed = prev.medecin.includes(String(m.id))
+                              ? prev.medecin.filter(id => id !== String(m.id))
+                              : [...prev.medecin, String(m.id)];
+                            return { ...prev, medecin: newMed, page: 1 };
+                          });
+                        }}
+                        style={{ 
+                          padding: '8px 16px', 
+                          borderRadius: '999px', 
+                          fontSize: '0.85rem', 
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                          opacity: filters.medecin.length > 0 && !isActive ? 0.6 : 1
+                        }}
+                        className={isActive ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700'}
+                      >
+                        {displayName}
+                        {isActive && <i className="fa-solid fa-check" style={{ marginLeft: '8px', fontSize: '0.75rem' }}></i>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+  
+            {/* Recherche textuelle */}
             <div>
-            <label>Patient (nom/prénom)</label>
-            <input
-              style={{ width: "100%" }}
-              value={filters.q}
-              onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value, page: 1 }))}
-            />
-          </div>
+              <label>
+                {(!isAdmin && !isSecretaire && !isMedecin) 
+                  ? "Rechercher un médecin (nom/prénom)" 
+                  : "Rechercher un patient (nom/prénom)"}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', opacity: 0.5 }}></i>
+                <input
+                  style={{ width: "100%", paddingLeft: '44px' }}
+                  value={filters.q}
+                  onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value, page: 1 }))}
+                />
+              </div>
+            </div>
           </div>
         </div>
   

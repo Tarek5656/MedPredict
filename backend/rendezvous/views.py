@@ -26,7 +26,7 @@ class RendezVousViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = RendezVousSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ["patient", "statut"]
+    filterset_fields = ["patient"]
 
     @action(detail=False, methods=["get"], url_path="me")
     def me(self, request):
@@ -58,6 +58,18 @@ class RendezVousViewSet(viewsets.ModelViewSet):
             else:
                 queryset = qs  # secretaire/admin
 
+        statuts = self.request.query_params.get("statut")
+        if statuts:
+            s_list = [s.strip() for s in statuts.split(",") if s.strip()]
+            if s_list:
+                queryset = queryset.filter(statut__in=s_list)
+
+        medecins = self.request.query_params.get("medecin")
+        if medecins:
+            m_list = [m.strip() for m in medecins.split(",") if m.strip()]
+            if m_list:
+                queryset = queryset.filter(medecin__in=m_list)
+
         date_str = self.request.query_params.get("date")
         if date_str:
             d = parse_date(date_str)
@@ -83,13 +95,17 @@ class RendezVousViewSet(viewsets.ModelViewSet):
                 term = parts[0]
                 queryset = queryset.filter(
                     Q(patient__nom__icontains=term) |
-                    Q(patient__prenom__icontains=term)
+                    Q(patient__prenom__icontains=term) |
+                    Q(medecin__first_name__icontains=term) |
+                    Q(medecin__last_name__icontains=term)
                 )
             else:
                 a, b = parts[0], parts[1]
                 queryset = queryset.filter(
                     (Q(patient__nom__icontains=a) & Q(patient__prenom__icontains=b)) |
-                    (Q(patient__nom__icontains=b) & Q(patient__prenom__icontains=a))
+                    (Q(patient__nom__icontains=b) & Q(patient__prenom__icontains=a)) |
+                    (Q(medecin__first_name__icontains=a) & Q(medecin__last_name__icontains=b)) |
+                    (Q(medecin__first_name__icontains=b) & Q(medecin__last_name__icontains=a))
                 )
 
         return queryset

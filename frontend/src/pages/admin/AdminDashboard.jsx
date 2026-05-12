@@ -10,7 +10,7 @@ export default function AdminDashboard() {
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
-  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [roleFilter, setRoleFilter] = useState([]); // Tableau pour multi-sélection
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -83,9 +83,13 @@ export default function AdminDashboard() {
   };
 
   const filteredUsers = users.filter((user) => {
-    if (roleFilter === "ALL") return true;
-    if (roleFilter === "AUCUN" && user.roles.length === 0) return true;
-    return user.roles.includes(roleFilter);
+    if (roleFilter.length === 0 || roleFilter.includes("ALL")) return true;
+    
+    // Cas spécial "Sans rôle"
+    if (roleFilter.includes("AUCUN") && user.roles.length === 0) return true;
+    
+    // Vérifie si l'utilisateur a au moins l'un des rôles sélectionnés
+    return user.roles.some(role => roleFilter.includes(role));
   });
 
   if (loading) {
@@ -129,7 +133,8 @@ export default function AdminDashboard() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `medpredict_users_${roleFilter.toLowerCase()}_${new Date().toISOString().split('T')[0]}.csv`);
+    const roleLabel = roleFilter.length === 0 ? "all" : roleFilter.join("_").toLowerCase();
+    link.setAttribute("download", `medpredict_users_${roleLabel}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -297,21 +302,45 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-bold text-gray-800">Annuaire des Utilisateurs</h2>
           
           <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
-            <div className="flex items-center px-2">
-              <i className="fa-solid fa-filter text-gray-400 mr-2 text-sm"></i>
-              <select 
-                className="bg-transparent text-sm font-semibold text-gray-700 cursor-pointer m-0 p-2"
-                style={{ border: "none", outline: "none", boxShadow: "none" }}
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-              >
-                <option value="ALL">Tous les rôles</option>
-                <option value="ADMIN">Administrateurs</option>
-                <option value="MEDECIN">Médecins</option>
-                <option value="SECRETAIRE">Secrétaires</option>
-                <option value="PATIENT">Patients</option>
-                <option value="AUCUN">Sans rôle</option>
-              </select>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {[
+                { id: 'ADMIN', label: 'Admins', class: 'bg-red-100 text-red-700', activeClass: 'bg-red-600 text-white' },
+                { id: 'MEDECIN', label: 'Médecins', class: 'bg-blue-100 text-blue-700', activeClass: 'bg-blue-600 text-white' },
+                { id: 'SECRETAIRE', label: 'Secrétaires', class: 'bg-green-100 text-green-700', activeClass: 'bg-green-600 text-white' },
+                { id: 'PATIENT', label: 'Patients', class: 'bg-cyan-100 text-cyan-700', activeClass: 'bg-cyan-600 text-white' },
+                { id: 'AUCUN', label: 'Sans rôle', class: 'bg-gray-100 text-gray-700', activeClass: 'bg-gray-600 text-white' },
+              ].map((role) => {
+                const isActive = roleFilter.includes(role.id);
+                return (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => {
+                      setRoleFilter(prev => {
+                        const newFilter = prev.includes(role.id)
+                          ? prev.filter(r => r !== role.id)
+                          : [...prev, role.id];
+                        return newFilter;
+                      });
+                    }}
+                    style={{ 
+                      padding: '6px 16px', 
+                      borderRadius: '999px', 
+                      fontSize: '0.8rem', 
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                      opacity: roleFilter.length > 0 && !isActive ? 0.6 : 1
+                    }}
+                    className={isActive ? role.activeClass : role.class}
+                  >
+                    {role.label}
+                    {isActive && <i className="fa-solid fa-check" style={{ marginLeft: '6px', fontSize: '0.7rem' }}></i>}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

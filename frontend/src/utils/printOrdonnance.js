@@ -21,7 +21,7 @@ export function printOrdonnance({ consultation, patient, ordonnance }) {
     "—";
 
   const patientLine = patient
-    ? `#${esc(patient.id)} — ${esc(patient.nom)} ${esc(patient.prenom)}`
+    ? `${esc(patient.nom)} ${esc(patient.prenom)}`
     : "—";
 
   const html = `
