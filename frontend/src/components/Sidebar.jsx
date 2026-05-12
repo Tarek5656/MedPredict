@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { menuItems } from "../utils/menuItems";
 import userService from "../services/userService";
+import { applyTheme } from "../utils/theme";
 
 export default function Sidebar() {
 
@@ -21,7 +22,8 @@ export default function Sidebar() {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
-    navigate("/login", { replace: true });
+    applyTheme("green");
+    window.location.href = "/login"; 
   };
 
   useEffect(() => {

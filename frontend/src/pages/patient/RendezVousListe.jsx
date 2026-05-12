@@ -3,18 +3,32 @@ import rendezvousService from "../../services/rendezvousService";
 import { extractApiError } from "../../utils/format";
 import Modal from "../../components/Modal";
 import RendezVousForm from "../../components/rendezvous/RendezVousForm";
+import userService from "../../services/userService";
+
+const DEFAULT_FILTERS = {
+  statut: [],
+  medecin: [],
+  q: "",
+};
 
 export default function RendezVousListe() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [medecins, setMedecins] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const load = async () => {
     setErr(null);
     setLoading(true);
     try {
-      const res = await rendezvousService.me();
+      const params = {};
+      if (filters.statut.length > 0) params.statut = filters.statut.join(",");
+      if (filters.medecin.length > 0) params.medecin = filters.medecin.join(",");
+      if (filters.q) params.q = filters.q;
+
+      const res = await rendezvousService.me(params);
       const data = Array.isArray(res.data) ? res.data : res.data.results || [];
       setItems(data.sort((a, b) => new Date(b.date_heure) - new Date(a.date_heure)));
     } catch (e) {
@@ -25,8 +39,21 @@ export default function RendezVousListe() {
   };
 
   useEffect(() => {
-    load();
+    const fetchMedecins = async () => {
+      try {
+        const res = await userService.medecins();
+        setMedecins(res.data || []);
+      } catch (err) {
+        console.error("Erreur chargement médecins", err);
+      }
+    };
+    fetchMedecins();
   }, []);
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   const handleCreated = () => {
     setIsModalOpen(false);
@@ -92,6 +119,103 @@ export default function RendezVousListe() {
             <i className={`fa-solid fa-arrows-rotate ${loading ? "fa-spin" : ""}`}></i>
             Actualiser
           </button>
+        </div>
+      </div>
+
+      <div className="mb-8 p-6 bg-gray-50/50 rounded-2xl border border-gray-100">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i className="fa-solid fa-sliders text-primary"></i>
+            Filtres
+          </h3>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Filtre Statut */}
+          <div>
+            <label style={{ marginBottom: '10px', display: 'block', fontWeight: 700, fontSize: '0.9rem', color: 'gray' }}>Filtrer par statut</label>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {[
+                { id: 'en_attente', label: 'En attente', class: 'bg-orange-100 text-orange-700', activeClass: 'bg-orange-500 text-white' },
+                { id: 'planifie', label: 'Planifié', class: 'bg-blue-100 text-blue-700', activeClass: 'bg-blue-600 text-white' },
+                { id: 'termine', label: 'Terminé', class: 'bg-green-100 text-green-700', activeClass: 'bg-green-600 text-white' },
+                { id: 'annule', label: 'Annulé', class: 'bg-red-100 text-red-700', activeClass: 'bg-red-600 text-white' },
+              ].map((s) => {
+                const isActive = filters.statut.includes(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      setFilters(prev => {
+                        const newStatut = prev.statut.includes(s.id)
+                          ? prev.statut.filter(id => id !== s.id)
+                          : [...prev.statut, s.id];
+                        return { ...prev, statut: newStatut };
+                      });
+                    }}
+                    style={{ 
+                      padding: '8px 18px', 
+                      borderRadius: '999px', 
+                      fontSize: '0.8rem', 
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      opacity: filters.statut.length > 0 && !isActive ? 0.6 : 1
+                    }}
+                    className={isActive ? s.activeClass : s.class}
+                  >
+                    {s.label}
+                    {isActive && <i className="fa-solid fa-check" style={{ marginLeft: '8px' }}></i>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Filtre Médecin */}
+          {medecins.length > 0 && (
+            <div>
+              <label style={{ marginBottom: '10px', display: 'block', fontWeight: 700, fontSize: '0.9rem', color: 'gray' }}>Filtrer par médecin</label>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {medecins.map((m) => {
+                  const isActive = filters.medecin.includes(String(m.id));
+                  const displayName = m.first_name || m.last_name 
+                    ? `Dr. ${m.first_name || ""} ${m.last_name || ""}`.trim() 
+                    : `Dr. ${m.username}`;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setFilters(prev => {
+                          const newMed = prev.medecin.includes(String(m.id))
+                            ? prev.medecin.filter(id => id !== String(m.id))
+                            : [...prev.medecin, String(m.id)];
+                          return { ...prev, medecin: newMed };
+                        });
+                      }}
+                      style={{ 
+                        padding: '8px 18px', 
+                        borderRadius: '999px', 
+                        fontSize: '0.8rem', 
+                        fontWeight: 700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        opacity: filters.medecin.length > 0 && !isActive ? 0.6 : 1
+                      }}
+                      className={isActive ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border border-gray-200 text-gray-700'}
+                    >
+                      {displayName}
+                      {isActive && <i className="fa-solid fa-check" style={{ marginLeft: '8px' }}></i>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 

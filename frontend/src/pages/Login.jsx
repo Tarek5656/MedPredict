@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -11,6 +11,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(''); // ✅ État pour l'erreur locale
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Reset theme to default on login page load
+    if (!localStorage.getItem("access_token")) {
+      applyTheme("green");
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

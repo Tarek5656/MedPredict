@@ -8,7 +8,7 @@ const rendezvousService = {
   annuler: (id) => api.post(`/rendezvous/${id}/annuler/`),
   approuver: (id) => api.post(`/rendezvous/${id}/approuver/`),
   refuser: (id) => api.post(`/rendezvous/${id}/refuser/`),
-  me: () => api.get("/rendezvous/me/"),
+  me: (params = {}) => api.get("/rendezvous/me/", { params }),
   listByDate: (ymd, { nonAnnule = true } = {}) =>
   api.get("/rendezvous/", { params: { date: ymd, non_annule: nonAnnule } }),
 };

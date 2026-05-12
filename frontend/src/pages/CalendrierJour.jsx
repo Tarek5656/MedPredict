@@ -226,8 +226,23 @@ export default function CalendrierJour() {
                 {(!isMedecin) ? (
                   <div style={{ display: "flex", justifyContent: "flex-end" }}>
                     {!past ? (
-                      <button type="button" onClick={() => openAdd(slotStart)}>
-                        + Ajouter
+                      <button 
+                        type="button" 
+                        onClick={() => openAdd(slotStart)}
+                        style={{ 
+                          width: "32px", 
+                          height: "32px", 
+                          padding: 0, 
+                          borderRadius: "50%", 
+                          fontSize: "1.2rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minWidth: "unset"
+                        }}
+                        title="Ajouter un rendez-vous"
+                      >
+                        +
                       </button>
                     ) : (
                       <span />
