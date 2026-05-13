@@ -6,11 +6,13 @@ from datetime import timedelta
 
 class RendezVous(models.Model):
     class Statut(models.TextChoices):
+        EN_ATTENTE = "en_attente"
         PLANIFIE = "planifie"
         ANNULE = "annule"
         TERMINER = "termine"
 
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="rendezvous")
+    medecin = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="rdvs_as_doctor")
     date_heure = models.DateTimeField()
     duree_minutes = models.PositiveIntegerField()
     motif = models.CharField(max_length=255, blank=True, default="")
@@ -35,6 +37,8 @@ class RendezVous(models.Model):
         """
         if self.statut == "annule":
             return "annule"
+        if self.statut == "en_attente":
+            return "en_attente"
         if timezone.now() >= self.end_datetime:
             return "termine"
         return "planifie"

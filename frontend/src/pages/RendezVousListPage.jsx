@@ -3,12 +3,12 @@ import { Link } from "react-router-dom";
 import rendezvousService from "../services/rendezvousService";
 import { extractApiError } from "../utils/format";
 import RendezVousForm from "../components/rendezvous/RendezVousForm";
-import SlideDrawer from "../components/SlideDrawer";
+import Modal from "../components/Modal";
 import userService from "../services/userService";
 
 const DEFAULT_FILTERS = {
-  statut: "",
-  patient: "",
+  statut: [], 
+  medecin: [], // Multi-sélection médecins
   q: "",
   page: 1,
 };
@@ -16,7 +16,7 @@ const DEFAULT_FILTERS = {
 export default function RendezVousListPage() {
   const [items, setItems] = useState([]);
   const [count, setCount] = useState(0);
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [isModalOpen, setModalOpen] = useState(false);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
 
@@ -24,6 +24,7 @@ export default function RendezVousListPage() {
   const [hasPrev, setHasPrev] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [medecins, setMedecins] = useState([]);
   const [err, setErr] = useState(null);
 
   const [me, setMe] = useState(null);
@@ -33,7 +34,7 @@ export default function RendezVousListPage() {
   const isAdmin = isSuperuser || (me?.groups || []).includes("ADMIN");
 
   const handleCreated = () => {
-    setDrawerOpen(false);
+    setModalOpen(false);
     load();
   };
 
@@ -42,8 +43,13 @@ export default function RendezVousListPage() {
     setLoading(true);
     try {
       const params = { page: filters.page };
-      if (filters.statut) params.statut = filters.statut;
-      if (filters.patient) params.patient = filters.patient;
+      if (filters.statut.length > 0) {
+        // On envoie les statuts séparés par des virgules
+        params.statut = filters.statut.join(",");
+      }
+      if (filters.medecin.length > 0) {
+        params.medecin = filters.medecin.join(",");
+      }
       if (filters.q) params.q = filters.q;
 
       const [meRes] = await Promise.all([
@@ -81,9 +87,21 @@ export default function RendezVousListPage() {
   };
 
   useEffect(() => {
+    const fetchMedecins = async () => {
+      try {
+        const res = await userService.medecins();
+        setMedecins(res.data || []);
+      } catch (err) {
+        console.error("Erreur chargement médecins", err);
+      }
+    };
+    fetchMedecins();
+  }, []);
+
+  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.statut, filters.patient, filters.q]);
+  }, [filters.page, filters.statut, filters.medecin, filters.q]);
 
   const resetFilters = () => setFilters(DEFAULT_FILTERS);
 
@@ -95,7 +113,10 @@ export default function RendezVousListPage() {
   
           {(isAdmin || isSecretaire) ? (
             <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-              <button onClick={() => setDrawerOpen(true)}>
+              <button 
+                onClick={() => setModalOpen(true)}
+                className="bg-[var(--primary)] text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-green-100 hover:scale-105 transition-all flex items-center gap-2"
+              >
                 <i className="fa-solid fa-plus"></i>
                 Nouveau rendez-vous
               </button>
@@ -136,39 +157,110 @@ export default function RendezVousListPage() {
             </div>
           </div>
   
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
             <div>
-              <label>Statut</label>
-              <select
-                style={{ width: "100%" }}
-                value={filters.statut}
-                onChange={(e) => setFilters((s) => ({ ...s, statut: e.target.value, page: 1 }))}
-              >
-                <option value="">Tous</option>
-                <option value="planifie">Planifié</option>
-                <option value="annule">Annulé</option>
-                <option value="termine">Terminé</option>
-              </select>
+              <label style={{ marginBottom: '8px', display: 'block' }}>Filtrer par statut</label>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {[
+                  { id: 'en_attente', label: 'En attente', class: 'bg-orange-100 text-orange-700', activeClass: 'bg-orange-500 text-white' },
+                  { id: 'planifie', label: 'Planifié', class: 'bg-blue-100 text-blue-700', activeClass: 'bg-blue-600 text-white' },
+                  { id: 'termine', label: 'Terminé', class: 'bg-green-100 text-green-700', activeClass: 'bg-green-600 text-white' },
+                  { id: 'annule', label: 'Annulé', class: 'bg-red-100 text-red-700', activeClass: 'bg-red-600 text-white' },
+                ].map((s) => {
+                  const isActive = filters.statut.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setFilters(prev => {
+                          const newStatut = prev.statut.includes(s.id)
+                            ? prev.statut.filter(id => id !== s.id)
+                            : [...prev.statut, s.id];
+                          return { ...prev, statut: newStatut, page: 1 };
+                        });
+                      }}
+                      style={{ 
+                        padding: '8px 16px', 
+                        borderRadius: '999px', 
+                        fontSize: '0.85rem', 
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                        opacity: filters.statut.length > 0 && !isActive ? 0.6 : 1
+                      }}
+                      className={isActive ? s.activeClass : s.class}
+                    >
+                      {s.label}
+                      {isActive && <i className="fa-solid fa-check" style={{ marginLeft: '8px', fontSize: '0.75rem' }}></i>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
   
+            {/* Filtrage par médecin : Visible pour Admin, Secrétaire ET Patient */}
+            {(isAdmin || isSecretaire || !isMedecin) && medecins.length > 0 && (
+              <div style={{ marginTop: '8px' }}>
+                <label style={{ marginBottom: '8px', display: 'block' }}>Filtrer par médecin</label>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {medecins.map((m) => {
+                    const isActive = filters.medecin.includes(String(m.id));
+                    const displayName = m.first_name || m.last_name 
+                      ? `Dr. ${m.first_name || ""} ${m.last_name || ""}`.trim() 
+                      : `Dr. ${m.username}`;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setFilters(prev => {
+                            const newMed = prev.medecin.includes(String(m.id))
+                              ? prev.medecin.filter(id => id !== String(m.id))
+                              : [...prev.medecin, String(m.id)];
+                            return { ...prev, medecin: newMed, page: 1 };
+                          });
+                        }}
+                        style={{ 
+                          padding: '8px 16px', 
+                          borderRadius: '999px', 
+                          fontSize: '0.85rem', 
+                          fontWeight: 600,
+                          border: 'none',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+                          opacity: filters.medecin.length > 0 && !isActive ? 0.6 : 1
+                        }}
+                        className={isActive ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700'}
+                      >
+                        {displayName}
+                        {isActive && <i className="fa-solid fa-check" style={{ marginLeft: '8px', fontSize: '0.75rem' }}></i>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+  
+            {/* Recherche textuelle */}
             <div>
-              <label>Patient (ID)</label>
-              <input
-                style={{ width: "100%" }}
-                value={filters.patient}
-                onChange={(e) => setFilters((s) => ({ ...s, patient: e.target.value, page: 1 }))}
-                placeholder="ex: 4"
-              />
+              <label>
+                {(!isAdmin && !isSecretaire && !isMedecin) 
+                  ? "Rechercher un médecin (nom/prénom)" 
+                  : "Rechercher un patient (nom/prénom)"}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <i className="fa-solid fa-magnifying-glass" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', opacity: 0.5 }}></i>
+                <input
+                  style={{ width: "100%", paddingLeft: '44px' }}
+                  value={filters.q}
+                  onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value, page: 1 }))}
+                />
+              </div>
             </div>
-            <div>
-            <label>Patient (nom/prénom)</label>
-            <input
-              style={{ width: "100%" }}
-              value={filters.q}
-              onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value, page: 1 }))}
-              placeholder="ex: charf tarek"
-            />
-          </div>
           </div>
         </div>
   
@@ -182,10 +274,10 @@ export default function RendezVousListPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Id</th>
                     <th>Date</th>
                     <th>Statut</th>
                     <th>Patient</th>
+                    <th>Médecin</th>
                     <th>Motif</th>
                     <th></th>
                   </tr>
@@ -193,20 +285,60 @@ export default function RendezVousListPage() {
                 <tbody>
                   {items.map((rdv) => (
                     <tr key={rdv.id}>
-                      <td style={{ fontWeight: 600 }}>{rdv.id || "—"}</td>
                       <td>{rdv.date || ""} {rdv.heure || ""} {(rdv.date_heure && new Date(rdv.date_heure).toLocaleString()) || ""}</td>
                       <td>
-                        <span className={`badge ${rdv.statut === "termine" || rdv.statut_effectif === "termine" ? "badge-success" : rdv.statut === "annule" || rdv.statut_effectif === "annule" ? "badge-error" : "badge-warning"}`}>
-                          {rdv.statut_effectif || rdv.statut}
+                        <span className={`badge ${
+                          (rdv.statut_effectif || rdv.statut) === 'termine' ? 'badge-success' : 
+                          (rdv.statut_effectif || rdv.statut) === 'annule' ? 'badge-error' : 
+                          (rdv.statut_effectif || rdv.statut) === 'en_attente' ? 'bg-orange-100 text-orange-700' :
+                          'badge-warning'
+                        }`}>
+                          {(rdv.statut_effectif || rdv.statut) === 'termine' ? 'Terminé' : 
+                           (rdv.statut_effectif || rdv.statut) === 'annule' ? 'Annulé' : 
+                           (rdv.statut_effectif || rdv.statut) === 'en_attente' ? 'En attente' : 'Planifié'}
                         </span>
                       </td>
                       <td>{rdv.patient_nom || ""} {rdv.patient_prenom || ""}</td>
+                      <td className="font-semibold text-gray-700">Dr. {rdv.medecin_nom || ""}</td>
                       <td>{rdv.motif || "—"}</td>
                       <td style={{ textAlign: "right" }}>
-                        <Link to={`/patients/${rdv.patient}`} style={{
-                          background: "var(--bg-color)", padding: "6px 16px", borderRadius: "2rem",
-                          fontSize: "0.85rem", fontWeight: 600
-                        }}>Patient →</Link>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          {(rdv.statut_effectif || rdv.statut) === "en_attente" && (isAdmin || isSecretaire) && (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await rendezvousService.approuver(rdv.id);
+                                    load();
+                                  } catch (e) {
+                                    alert(extractApiError(e));
+                                  }
+                                }}
+                                className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-600 transition-all"
+                              >
+                                Accepter
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm("Refuser cette demande ?")) return;
+                                  try {
+                                    await rendezvousService.refuser(rdv.id);
+                                    load();
+                                  } catch (e) {
+                                    alert(extractApiError(e));
+                                  }
+                                }}
+                                className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 transition-all"
+                              >
+                                Refuser
+                              </button>
+                            </>
+                          )}
+                          <Link to={`/patients/${rdv.patient}`} style={{
+                            background: "var(--bg-color)", padding: "6px 16px", borderRadius: "2rem",
+                            fontSize: "0.85rem", fontWeight: 600
+                          }}>Patient →</Link>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -233,9 +365,14 @@ export default function RendezVousListPage() {
           </div>
         </div>
 
-        <SlideDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} title="Nouveau Rendez-vous">
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => setModalOpen(false)} 
+          title="Nouveau Rendez-vous"
+          maxWidth="max-w-2xl"
+        >
           <RendezVousForm onSuccess={handleCreated} />
-        </SlideDrawer>
+        </Modal>
       </div>
     );
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import patientService from "../services/patientService";
 import { extractApiError } from "../utils/format";
-import SlideDrawer from "../components/SlideDrawer";
+import Modal from "../components/Modal";
 import PatientForm from "../components/patient/PatientForm";
 import userService from "../services/userService";
 
@@ -26,7 +26,7 @@ export default function PatientsList() {
 
   const [hasNext, setHasNext] = useState(false);
   const [hasPrev, setHasPrev] = useState(false);
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
+  const [isModalOpen, setModalOpen] = useState(false);
 
   const resetFilters = () => setFilters(DEFAULT_FILTERS);
 
@@ -37,7 +37,7 @@ export default function PatientsList() {
   const isAdmin = isSuperuser || (me?.groups || []).includes("ADMIN");
 
   const handleCreated = () => {
-    setDrawerOpen(false);
+    setModalOpen(false);
     load();
   };
 
@@ -52,9 +52,7 @@ export default function PatientsList() {
 
       setMe(meRes.data);
 
-      if (filters.id) params.id = filters.id;
       if (filters.telephone) params.telephone = filters.telephone;
-      if (filters.email) params.email = filters.email;
       if (filters.nom) params.nom = filters.nom;
       if (filters.prenom) params.prenom = filters.prenom;
 
@@ -99,8 +97,11 @@ export default function PatientsList() {
   
           {(isAdmin || isSecretaire) ? (
             <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center" }}>
-              <button onClick={() => setDrawerOpen(true)}>
-                <i className="fa-solid fa-plus"></i>
+              <button 
+                onClick={() => setModalOpen(true)}
+                className="bg-[var(--primary)] text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-green-100 hover:scale-105 transition-all flex items-center gap-2"
+              >
+                <i className="fa-solid fa-user-plus"></i>
                 Nouveau patient
               </button>
             </div>
@@ -143,42 +144,11 @@ export default function PatientsList() {
   
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
             <div>
-              <label>Patient (ID)</label>
-              <input
-                style={{ width: "100%" }}
-                value={filters.id}
-                onChange={(e) => setFilters((s) => ({ ...s, id: e.target.value, page: 1 }))}
-                placeholder="ex: 4"
-              />
-            </div>
-  
-            <div>
-              <label>Téléphone</label>
-              <input
-                style={{ width: "100%" }}
-                value={filters.telephone}
-                onChange={(e) => setFilters((s) => ({ ...s, telephone: e.target.value, page: 1 }))}
-                placeholder="ex: 0612345678"
-              />
-            </div>
-  
-            <div>
-              <label>Email</label>
-              <input
-                style={{ width: "100%" }}
-                value={filters.email}
-                onChange={(e) => setFilters((s) => ({ ...s, email: e.target.value, page: 1 }))}
-                placeholder="ex: a@b.com"
-              />
-            </div>
-  
-            <div>
               <label>Nom</label>
               <input
                 style={{ width: "100%" }}
                 value={filters.nom}
                 onChange={(e) => setFilters((s) => ({ ...s, nom: e.target.value, page: 1 }))}
-                placeholder="ex: Charfi"
               />
             </div>
   
@@ -188,7 +158,15 @@ export default function PatientsList() {
                 style={{ width: "100%" }}
                 value={filters.prenom}
                 onChange={(e) => setFilters((s) => ({ ...s, prenom: e.target.value, page: 1 }))}
-                placeholder="ex: Ahmed"
+              />
+            </div>
+
+            <div>
+              <label>Téléphone</label>
+              <input
+                style={{ width: "100%" }}
+                value={filters.telephone}
+                onChange={(e) => setFilters((s) => ({ ...s, telephone: e.target.value, page: 1 }))}
               />
             </div>
           </div>
@@ -204,7 +182,6 @@ export default function PatientsList() {
               <table>
                 <thead>
                   <tr>
-                    <th>ID</th>
                     <th>Nom</th>
                     <th>Prénom</th>
                     <th>Téléphone</th>
@@ -215,7 +192,6 @@ export default function PatientsList() {
                 <tbody>
                   {patients.map((p) => (
                     <tr key={p.id}>
-                      <td>#{p.id}</td>
                       <td style={{ fontWeight: 600 }}>{p.nom}</td>
                       <td>{p.prenom}</td>
                       <td>{p.telephone || "—"}</td>
@@ -253,9 +229,14 @@ export default function PatientsList() {
           </div>
         </div>
   
-        <SlideDrawer isOpen={isDrawerOpen} onClose={() => setDrawerOpen(false)} title="Nouveau Patient">
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => setModalOpen(false)} 
+          title="Ajouter un nouveau patient"
+          maxWidth="max-w-lg"
+        >
           <PatientForm onSuccess={handleCreated} />
-        </SlideDrawer>
+        </Modal>
       </div>
     );
-}
+}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Login from "./pages/Login.jsx";
+import { Toaster } from 'react-hot-toast';
 import PatientsList from "./pages/PatientListe";
 import PatientDetail from "./pages/PatientDetails";
 import AppLayout from "./components/AppLayout";
@@ -14,6 +15,8 @@ import CalendrierJour from "./pages/CalendrierJour.jsx";
 import Analyses from "./pages/medecin/Analyses.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import Overview from "./pages/Overview.jsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import NotificationListe from "./pages/NotificationListe.jsx";
 import { applyTheme, themeFromMe } from "./utils/theme";
 import userService from "./services/userService.js";
 
@@ -42,8 +45,8 @@ function RoleRoute({ children, allowGroups = [], allowSuperuser = true }) {
         if (alive) setMe(res.data);
       } catch (e) {
         // IMPORTANT: si me() échoue, on force logout => casse la boucle
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
         if (alive) setMe(null);
       } finally {
         if (alive) setLoading(false);
@@ -83,6 +86,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-right" reverseOrder={false} />
       <AppLayout>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -118,6 +122,14 @@ export default function App() {
             element={
               <RoleRoute allowGroups={["MEDECIN", "SECRETAIRE"]}>
                 <RendezVousListPage />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/notifications/liste"
+            element={
+              <RoleRoute allowGroups={["MEDECIN", "SECRETAIRE", "PATIENT"]}>
+                <NotificationListe />
               </RoleRoute>
             }
           />
@@ -166,6 +178,14 @@ export default function App() {
             element={
               <RoleRoute allowGroups={["MEDECIN"]}>
                 <Analyses />
+              </RoleRoute>
+            } 
+          />
+          <Route 
+            path="/admin/dashboard" 
+            element={
+              <RoleRoute allowSuperuser={true} allowGroups={["ADMIN"]}>
+                <AdminDashboard />
               </RoleRoute>
             } 
           />

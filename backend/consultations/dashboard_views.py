@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models.functions import ExtractWeekDay
-from django.db.models import Count
+from django.db.models import Count, Q
 
 from patients.models import Patient
 from rendezvous.models import RendezVous
@@ -36,11 +36,18 @@ class DashboardStatsAPIView(APIView):
         data = {}
 
         if is_doctor:
-            total_patients = Patient.objects.count()
-            total_patients_yesterday = Patient.objects.filter(created_at__lt=today_start).count()
+            # Patients suivis par ce médecin (ayant eu un RDV ou une Consultation)
+            total_patients = Patient.objects.filter(
+                Q(rendezvous__medecin=user) | Q(consultations__medecin=user)
+            ).distinct().count()
             
-            appointments_today = RendezVous.objects.filter(date_heure__gte=today_start, date_heure__lt=today_end).count()
-            appointments_yesterday = RendezVous.objects.filter(date_heure__gte=yesterday_start, date_heure__lt=yesterday_end).count()
+            total_patients_yesterday = Patient.objects.filter(
+                (Q(rendezvous__medecin=user) | Q(consultations__medecin=user)),
+                created_at__lt=today_start
+            ).distinct().count()
+            
+            appointments_today = RendezVous.objects.filter(medecin=user, date_heure__gte=today_start, date_heure__lt=today_end).count()
+            appointments_yesterday = RendezVous.objects.filter(medecin=user, date_heure__gte=yesterday_start, date_heure__lt=yesterday_end).count()
             
             completed_tasks = Consultation.objects.filter(medecin=user).count()
             completed_tasks_yesterday = Consultation.objects.filter(medecin=user, date__lt=today_start).count()
@@ -57,9 +64,11 @@ class DashboardStatsAPIView(APIView):
                 'completedTasks': calc_trend(completed_tasks, completed_tasks_yesterday)
             }
             
-            # Chart Data (Mocking weekday aggregation for now since RendezVous doesn't have a medecin)
-            # Or we can aggregate Rendezvous by weekday for the clinic
-            rdvs_by_day = RendezVous.objects.filter(date_heure__gte=now - timedelta(days=7)).annotate(weekday=ExtractWeekDay('date_heure')).values('weekday').annotate(count=Count('id'))
+            # Graphique : Activité de CE médecin sur les 7 derniers jours
+            rdvs_by_day = RendezVous.objects.filter(
+                medecin=user,
+                date_heure__gte=now - timedelta(days=7)
+            ).annotate(weekday=ExtractWeekDay('date_heure')).values('weekday').annotate(count=Count('id'))
             
             day_map = {1: 'Sun', 2: 'Mon', 3: 'Tue', 4: 'Wed', 5: 'Thu', 6: 'Fri', 7: 'Sat'}
             chart_data = {d: 0 for d in day_map.values()}
@@ -68,15 +77,31 @@ class DashboardStatsAPIView(APIView):
                     chart_data[day_map[r['weekday']]] += r['count']
             
             data['chartData'] = [{'name': k, 'patients': v} for k, v in chart_data.items()]
+
+            # Planning personnel du jour (Logique de file d'attente)
+            today_rdvs = RendezVous.objects.filter(
+                medecin=user,
+                date_heure__gte=today_start, 
+                date_heure__lt=today_end
+            ).exclude(statut='annule').order_by('date_heure')
             
-            today_rdvs = RendezVous.objects.filter(date_heure__gte=today_start, date_heure__lt=today_end).exclude(statut='annule').order_by('date_heure')
-            data['todaySchedule'] = [
-                {
-                    'time': timezone.localtime(r.date_heure).strftime('%H:%M %p'),
+            schedule = []
+            for r in today_rdvs:
+                end_time = r.date_heure + timedelta(minutes=int(r.duree_minutes or 0))
+                if now >= end_time:
+                    continue # On enlève si c'est fini
+                
+                status = 'Waiting'
+                if r.date_heure <= now < end_time:
+                    status = 'Consulting'
+                
+                schedule.append({
+                    'time': timezone.localtime(r.date_heure).strftime('%H:%M'),
                     'patient': f"{r.patient.prenom} {r.patient.nom}",
-                    'reason': r.motif or "Consultation"
-                } for r in today_rdvs
-            ]
+                    'reason': r.motif or "Consultation",
+                    'status': status
+                })
+            data['todaySchedule'] = schedule
 
         elif is_secretary:
             appointments_today = RendezVous.objects.filter(date_heure__gte=today_start, date_heure__lt=today_end).count()
@@ -95,26 +120,58 @@ class DashboardStatsAPIView(APIView):
                 'newRegistrations': calc_trend(registrations_today, registrations_yesterday)
             }
             
-            # Since Rendezvous doesn't have medecin, we just send empty barData or a generic stat
-            data['barData'] = []
+            # Populate barData with appointments per doctor
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            doctors = User.objects.filter(groups__name="MEDECIN")
+            bar_data = []
+            for doc in doctors:
+                count = RendezVous.objects.filter(
+                    medecin=doc,
+                    date_heure__gte=today_start,
+                    date_heure__lt=today_end
+                ).count()
+                bar_data.append({
+                    'name': f"Dr. {doc.last_name}",
+                    'appts': count
+                })
+            data['barData'] = bar_data
             
-            pending_rdvs = RendezVous.objects.filter(date_heure__gte=today_start, date_heure__lt=today_end, statut="planifie").order_by('date_heure')
-            data['checkInQueue'] = [
-                {
+            # New Queue Logic: Remove finished, show active
+            today_rdvs = RendezVous.objects.filter(
+                date_heure__gte=today_start, 
+                date_heure__lt=today_end
+            ).exclude(statut="annule").order_by('date_heure')
+            
+            queue = []
+            for r in today_rdvs:
+                end = r.date_heure + timedelta(minutes=int(r.duree_minutes or 0))
+                if now >= end:
+                    continue # Skip finished
+                
+                status = 'Waiting'
+                if r.date_heure <= now < end:
+                    status = 'Consulting'
+                
+                queue.append({
                     'name': f"{r.patient.prenom} {r.patient.nom}",
-                    'time': timezone.localtime(r.date_heure).strftime('%H:%M %p'),
-                    'status': 'Waiting'
-                } for r in pending_rdvs
-            ]
+                    'time': timezone.localtime(r.date_heure).strftime('%H:%M'),
+                    'status': status,
+                    'doctor': f"Dr. {r.medecin.last_name}" if r.medecin else ""
+                })
+            data['checkInQueue'] = queue
 
         elif is_patient:
             data['role'] = 'patient'
-            next_rdv = RendezVous.objects.filter(patient__user=user, date_heure__gte=now).order_by('date_heure').first()
+            next_rdv = RendezVous.objects.filter(
+                patient__user=user, 
+                date_heure__gte=now
+            ).exclude(statut='annule').order_by('date_heure').first()
             if next_rdv:
                 data['nextVisit'] = {
                     'day': 'Today' if next_rdv.date_heure.date() == now.date() else next_rdv.date_heure.strftime('%b %d'),
                     'time': timezone.localtime(next_rdv.date_heure).strftime('%H:%M %p'),
-                    'doctor': "Clinic Doctor"
+                    'doctor': f"Dr. {next_rdv.medecin.last_name}" if next_rdv.medecin else "Dr. Yahyaoui"
                 }
             else:
                 data['nextVisit'] = None
@@ -124,7 +181,7 @@ class DashboardStatsAPIView(APIView):
                 {
                     'title': "Consultation",
                     'date': timezone.localtime(c.date).strftime('%B %d, %Y'),
-                    'desc': c.observations or "Regular checkup."
+                    'desc': c.diagnostic or c.notes_cliniques or "Regular checkup."
                 } for c in past_consultations
             ]
             
@@ -133,9 +190,9 @@ class DashboardStatsAPIView(APIView):
                 if hasattr(c, 'ordonnance'):
                     for ligne in c.ordonnance.lignes.all():
                         active_prescriptions.append({
-                            'med': ligne.medicament,
-                            'dose': ligne.posologie,
-                            'duration': ligne.duree
+                            'med': ligne.nom,
+                            'dose': ligne.dosage,
+                            'duration': f"{ligne.duree_jours} jours" if ligne.duree_jours else "N/A"
                         })
             data['activePrescriptions'] = active_prescriptions
 

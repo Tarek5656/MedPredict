@@ -6,7 +6,9 @@ const rendezvousService = {
   patch: (id, data) => api.patch(`/rendezvous/${id}/`, data),
   remove: (id) => api.delete(`/rendezvous/${id}/`),
   annuler: (id) => api.post(`/rendezvous/${id}/annuler/`),
-  me: () => api.get("/rendezvous/me/"),
+  approuver: (id) => api.post(`/rendezvous/${id}/approuver/`),
+  refuser: (id) => api.post(`/rendezvous/${id}/refuser/`),
+  me: (params = {}) => api.get("/rendezvous/me/", { params }),
   listByDate: (ymd, { nonAnnule = true } = {}) =>
   api.get("/rendezvous/", { params: { date: ymd, non_annule: nonAnnule } }),
 };

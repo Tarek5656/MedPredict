@@ -2,8 +2,19 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { menuItems } from "../utils/menuItems";
 import userService from "../services/userService";
+import { applyTheme } from "../utils/theme";
 
 export default function Sidebar() {
+
+  const from = import.meta.env.VITE_TWILIO_WHATSAPP_FROM;
+  const joinCode = import.meta.env.VITE_TWILIO_SANDBOX_JOIN_CODE;
+
+  const phone = (from || "")
+    .replace(/^whatsapp:/, "") // enlève "whatsapp:"
+    .replace(/^\+/, "");       // enlève "+"
+
+  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(joinCode)}`;
+
   const location = useLocation();
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
@@ -11,7 +22,8 @@ export default function Sidebar() {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
-    navigate("/login", { replace: true });
+    applyTheme("green");
+    window.location.href = "/login"; 
   };
 
   useEffect(() => {
@@ -70,13 +82,14 @@ export default function Sidebar() {
       </nav>
 
       <div style={{ marginTop: "auto", borderTop: "1px solid var(--border-color)", paddingTop: 24, paddingBottom: 0 }}>
-        <button style={{ 
+        <a 
+        href={waUrl} target="_blank" rel="noopener noreferrer" style={{ 
           display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px", margin: "4px 16px",
           borderRadius: 9999, textDecoration: "none", fontSize: "2rem", fontWeight: 500,
           backgroundColor: "transparent", color: "var(--primary)", border: "none", width: "calc(100% - 32px)", cursor: "pointer"
-        }} className="hover-bg-slate" title="Support">
+        }} className="hover-bg-slate" title="Chatbot WhatsApp">
           <i className="fa-regular fa-comment-dots"></i>
-        </button>
+        </a>
         <button onClick={handleLogout} style={{ 
           display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", margin: "4px 16px",
           borderRadius: 9999, textDecoration: "none", fontSize: "0.875rem", fontWeight: 500,

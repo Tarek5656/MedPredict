@@ -1,6 +1,7 @@
 """
 Entraîne un modèle de prédiction de maladie basé sur un dataset:
 - 1 colonne cible (maladie)
+- 2 colonnes démographiques (age, gender)
 - N colonnes symptômes (0/1)
 
 Sauvegarde:
@@ -15,14 +16,15 @@ import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
 from sklearn.metrics import f1_score
-from scipy.sparse import csr_matrix
-from sklearn.linear_model import SGDClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier
 
 BASE_DIR = os.path.dirname(__file__)
-DATA_PATH = os.path.join(BASE_DIR, "data", "dataset.csv")
+DATA_PATH = os.path.join(BASE_DIR, "data", "dataset_prototype.csv")
 
 MODELS_DIR = os.path.join(os.path.dirname(BASE_DIR), "models")
 MODEL_PATH = os.path.join(MODELS_DIR, "disease_model.pkl")
@@ -30,12 +32,8 @@ FEATURES_PATH = os.path.join(MODELS_DIR, "feature_columns.json")
 
 TARGET_COL = "diseases"
 
-# ✅ Pour stabilité en prod: regrouper classes rares
-MIN_SAMPLES_PER_CLASS = 5
-OTHER_LABEL = "other"
-
 # ✅ Pour UI: Top-k utile
-TOP_K_EVAL = 5
+TOP_K_EVAL = 1
 
 
 def top_k_accuracy(model, X, y_true, k=5):
@@ -61,62 +59,100 @@ def main():
     # y = maladies
     y = df[TARGET_COL].astype(str)
 
-    # X = colonnes symptômes (tout sauf TARGET_COL)
-    feature_cols = [c for c in df.columns if c != TARGET_COL]
-
-    # Convertir en int 0/1 propre (rapide et safe)
-    X = df[feature_cols].fillna(0).astype(np.int8)
-    X = csr_matrix(X.values)
-
     # ✅ Regrouper classes rares en "other" (stabilise énormément)
+    MIN_SAMPLES_PER_CLASS = 2
+    OTHER_LABEL = "other"
     counts = y.value_counts()
     rare = counts[counts < MIN_SAMPLES_PER_CLASS].index
-    y2 = y.where(~y.isin(rare), other=OTHER_LABEL)
+    y = y.where(~y.isin(rare), other=OTHER_LABEL)
+
+    # Identifier les types de colonnes
+    feature_cols = [c for c in df.columns if c != TARGET_COL]
+    
+    # Validation de la présence de l'age et gender
+    if "age" not in feature_cols or "gender" not in feature_cols:
+        print("ATTENTION: age ou gender introuvable dans le dataset. Assurez-vous d'avoir exécuté la génération de données synthétiques.")
+        
+    num_cols = ["age"] if "age" in feature_cols else []
+    cat_cols = ["gender"] if "gender" in feature_cols else []
+    symptom_cols = [c for c in feature_cols if c not in ["age", "gender"]]
 
     print("Dataset shape:", df.shape)
     print("Nb features:", len(feature_cols))
-    print("Nb classes avant:", y.nunique())
-    print("Nb classes après:", y2.nunique())
-    print(f"Classes regroupées (<{MIN_SAMPLES_PER_CLASS}):", len(rare))
-    print(f"Taille '{OTHER_LABEL}':", int((y2 == OTHER_LABEL).sum()))
+    print("Nb maladies uniques:", y.nunique())
 
-    # ✅ Split stratifié (possible car plus de classes à 1 sample)
+    X = df[feature_cols]
+    
+    # ✅ DATA AUGMENTATION: Masquer intentionnellement age/sexe sur 30% des données
+    # Cela force le modèle à apprendre à prédire de façon précise UNIQUEMENT avec les symptômes.
+    np.random.seed(42)
+    
+    if "age" in X.columns:
+        mask_age = np.random.rand(len(X)) < 0.3
+        X.loc[mask_age, "age"] = np.nan
+        
+    if "gender" in X.columns:
+        mask_gender = np.random.rand(len(X)) < 0.3
+        X.loc[mask_gender, "gender"] = "Unknown"
+        X["gender"] = X["gender"].fillna("Unknown")
+        
+    # Les symptômes manquants deviennent 0
+    X[symptom_cols] = X[symptom_cols].fillna(0).astype(np.int8)
+
+    # Split train/test
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y2, test_size=0.2, random_state=42, stratify=y2
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # Preprocessor pour ColumnTransformer
+    transformers = []
+    if num_cols:
+        num_pipeline = make_pipeline(
+            SimpleImputer(strategy="median", add_indicator=True),
+            StandardScaler()
+        )
+        transformers.append(("num", num_pipeline, num_cols))
+    if cat_cols:
+        cat_pipeline = make_pipeline(
+            SimpleImputer(strategy="constant", fill_value="Unknown"),
+            OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        )
+        transformers.append(("cat", cat_pipeline, cat_cols))
+    if symptom_cols:
+        transformers.append(("symptoms", "passthrough", symptom_cols))
+        
+    preprocessor = ColumnTransformer(transformers=transformers)
+
+    hgb_model = HistGradientBoostingClassifier(
+        max_iter=100,
+        max_depth=15,
+        random_state=42,
+        verbose=0
     )
 
     pipeline = Pipeline([
-        ("clf", SGDClassifier(
-            loss="log_loss",
-            penalty="l2",
-            alpha=1e-4,              # à tuner (1e-5 à 1e-3)
-            max_iter=60,             # "epochs" max
-            tol=1e-3,
-            early_stopping=True,     # stop si pas d'amélioration
-            validation_fraction=0.1, # 10% du train pour val
-            n_iter_no_change=5,      # patience
-            class_weight="balanced",
-            random_state=42,
-            verbose=1,
-        )),
+        ("preprocessor", preprocessor),
+        ("clf", hgb_model),
     ])
 
-    print("Entraînement...")
+
+    print("Entraînement avec HistGradientBoostingClassifier...")
     pipeline.fit(X_train, y_train)
 
+    print("Évaluation...")
     # F1 sur tout le test set
     preds = pipeline.predict(X_test)
     f1_macro = f1_score(y_test, preds, average="macro")
     f1_weighted = f1_score(y_test, preds, average="weighted")
 
-    # Top-k sur un échantillon (beaucoup plus rapide)
-    EVAL_N = 10000
+    # Top-k sur un échantillon
+    EVAL_N = 100
     rng = np.random.RandomState(42)
     n = X_test.shape[0]
     take = min(EVAL_N, n)
     idx = rng.choice(n, size=take, replace=False)
 
-    X_eval = X_test[idx]
+    X_eval = X_test.iloc[idx]
     y_eval = np.asarray(y_test)[idx]
     top5 = top_k_accuracy(pipeline, X_eval, y_eval, k=TOP_K_EVAL)
 
@@ -128,19 +164,15 @@ def main():
     os.makedirs(MODELS_DIR, exist_ok=True)
     joblib.dump(pipeline, MODEL_PATH)
 
+    # On sauvegarde l'ordre exact des features pour le serveur Flask
     with open(FEATURES_PATH, "w", encoding="utf-8") as f:
         json.dump(feature_cols, f, ensure_ascii=False, indent=2)
 
     print(f"\nModèle sauvegardé: {MODEL_PATH}")
     print(f"Features sauvegardées: {FEATURES_PATH}")
 
-    # Test rapide: prendre une ligne
-    sample = X_test[0:1]
-    proba = pipeline.predict_proba(sample)[0]
-    classes = pipeline.classes_
-    top = sorted(zip(classes, proba), key=lambda x: x[1], reverse=True)[:5]
-    print("\nTop-5 exemple:", [(d, round(float(p), 3)) for d, p in top])
-
 
 if __name__ == "__main__":
+    import warnings
+    warnings.filterwarnings("ignore")
     main()

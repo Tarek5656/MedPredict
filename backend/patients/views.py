@@ -7,9 +7,13 @@ from django.contrib.auth.password_validation import validate_password
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Patient, DossierMedical
-from .serializers import PatientSerializer, DossierMedicalSerializer
+from .serializers import PatientSerializer, DossierMedicalSerializer, MyTokenObtainPairSerializer
 from .permissions import IsSecretaire, IsMedecin
 from .filters import PatientFilter
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
 
 @api_view(["GET"])
@@ -27,7 +31,14 @@ def me(request):
 def medecins_list(request):
     User = get_user_model()
     qs = User.objects.filter(groups__name="MEDECIN").order_by("username").distinct()
-    data = [{"id": u.id, "username": u.username} for u in qs]
+    data = [
+        {
+            "id": u.id, 
+            "username": u.username,
+            "first_name": u.first_name,
+            "last_name": u.last_name
+        } for u in qs
+    ]
     return Response(data)
 
 @api_view(["PATCH"])

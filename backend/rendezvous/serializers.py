@@ -8,6 +8,8 @@ class RendezVousSerializer(serializers.ModelSerializer):
     end_datetime = serializers.DateTimeField(read_only=True)
     patient_nom = serializers.CharField(source="patient.nom", read_only=True)
     patient_prenom = serializers.CharField(source="patient.prenom", read_only=True)
+    medecin_nom = serializers.CharField(source="medecin.last_name", read_only=True)
+    medecin_prenom = serializers.CharField(source="medecin.first_name", read_only=True)
 
     class Meta:
         model = RendezVous
@@ -16,6 +18,9 @@ class RendezVousSerializer(serializers.ModelSerializer):
             "patient",
             "patient_nom",
             "patient_prenom",
+            "medecin",
+            "medecin_nom",
+            "medecin_prenom",
             "date_heure",
             "duree_minutes",
             "motif",
@@ -38,15 +43,33 @@ class RendezVousSerializer(serializers.ModelSerializer):
         duree = attrs.get("duree_minutes", getattr(instance, "duree_minutes", None))
         statut = attrs.get("statut", getattr(instance, "statut", "planifie"))
         patient = attrs.get("patient", getattr(instance, "patient", None))
+        medecin = attrs.get("medecin", getattr(instance, "medecin", None))
 
-        if statut == "planifie" and patient is not None:
-            qs = RendezVous.objects.filter(patient=patient, statut="planifie", date_heure__gte=timezone.now(),)
-            if instance is not None:
-                qs = qs.exclude(pk=instance.pk)
+        # ---- 1 Rendez-vous par patient par jour ET vérification consultation ----
+        if patient and date_heure and statut != "annule":
+            start_day = date_heure.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_day = start_day + timedelta(days=1)
 
-            if qs.exists():
+            # Check existing RDV today
+            qs_rdv = RendezVous.objects.filter(
+                patient=patient,
+                date_heure__gte=start_day,
+                date_heure__lt=end_day
+            ).exclude(statut="annule")
+            
+            if instance:
+                qs_rdv = qs_rdv.exclude(pk=instance.pk)
+
+            if qs_rdv.exists():
                 raise serializers.ValidationError({
-                    "patient": "Ce patient a déjà un rendez-vous planifié. Annulez/terminez le rendez-vous existant avant d’en créer un nouveau."
+                    "patient": "Le patient a déjà un rendez-vous pour cette journée."
+                })
+
+            # Check if consultation already exists today
+            from consultations.models import Consultation
+            if Consultation.objects.filter(patient=patient, date__gte=start_day, date__lt=end_day).exists():
+                raise serializers.ValidationError({
+                    "patient": "Ce patient a déjà passé une consultation aujourd'hui."
                 })
 
         if date_heure is None or duree is None:
@@ -69,8 +92,28 @@ class RendezVousSerializer(serializers.ModelSerializer):
                 "date_heure": "Impossible de créer/modifier un rendez-vous dans le passé."
             })
 
+        # Limitation de l'avance (90 jours)
+        if date_heure > timezone.now() + timedelta(days=90):
+            raise serializers.ValidationError({
+                "date_heure": "Les réservations ne sont ouvertes que pour les 90 prochains jours."
+            })
+
         start = date_heure
-        end = start + timedelta(minutes=duree)
+        end = start + timedelta(minutes=int(duree))
+
+        # ---- Anti-chevauchement PATIENT ----
+        if patient:
+            qs_p = RendezVous.objects.exclude(statut="annule")
+            if instance:
+                qs_p = qs_p.exclude(pk=instance.pk)
+            
+            p_candidates = qs_p.filter(patient=patient, date_heure__lt=end)
+            for prdv in p_candidates:
+                prdv_end = prdv.date_heure + timedelta(minutes=int(prdv.duree_minutes))
+                if prdv_end > start:
+                    raise serializers.ValidationError({
+                        "patient": "Ce patient a déjà un autre rendez-vous de prévu à cette heure-là."
+                    })
 
         # ---- Créneaux autorisés + reste du temps ----
         morning_start = time(9, 0)
@@ -79,6 +122,23 @@ class RendezVousSerializer(serializers.ModelSerializer):
         aft_end       = time(18, 0)
 
         t_start = start.timetz().replace(tzinfo=None)
+
+        # ---- Restriction jours ----
+        # weekday(): 0=lundi ... 5=samedi ... 6=dimanche
+        wd = start.weekday()
+
+        if wd == 6:  # dimanche
+            raise serializers.ValidationError({
+                "date_heure": "Aucun rendez-vous le dimanche."
+            })
+
+        # samedi: matin uniquement
+        if wd == 5:
+            if not (morning_start <= t_start < morning_end):
+                raise serializers.ValidationError({
+                    "date_heure": "Le samedi, les rendez-vous sont possibles uniquement le matin (09:00-13:00)."
+                })
+        # lundi-vendredi: ok (matin ou après-midi, géré par la suite)
 
         # Déterminer fin de créneau selon l'heure de début
         if morning_start <= t_start < morning_end:
@@ -103,10 +163,13 @@ class RendezVousSerializer(serializers.ModelSerializer):
                 "duree_minutes": f"Durée trop longue: il ne reste que {remaining} minutes dans ce créneau."
             })
 
-        # ---- Anti-chevauchement (hors annule) ----
+        # ---- Anti-chevauchement (par médecin, hors annule) ----
         qs = RendezVous.objects.exclude(statut="annule")
         if instance is not None:
             qs = qs.exclude(pk=instance.pk)
+
+        if medecin:
+            qs = qs.filter(medecin=medecin)
 
         candidates = qs.filter(date_heure__lt=end)
 
@@ -114,7 +177,7 @@ class RendezVousSerializer(serializers.ModelSerializer):
             rdv_end = rdv.date_heure + timedelta(minutes=int(rdv.duree_minutes))
             if rdv_end > start:
                 raise serializers.ValidationError({
-                    "date_heure": f"Créneau indisponible: chevauchement avec le RDV #{rdv.id}."
+                    "date_heure": "le medecin a un rendez-vous planifié pour ces heures"
                 })
 
         return attrs

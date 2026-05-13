@@ -24,6 +24,17 @@ export default function Header() {
     return "Utilisateur";
   };
 
+  const getFormattedName = (user) => {
+    if (!user) return "-";
+    const groups = user.groups || [];
+    const isMedecin = groups.includes("MEDECIN");
+    
+    const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ");
+    const displayName = fullName || user.username || "-";
+    
+    return isMedecin ? `Dr. ${displayName}` : displayName;
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -51,23 +62,6 @@ export default function Header() {
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
         <h1 style={{ fontSize: "1.25rem", margin: 0, fontWeight: 700, color: "var(--primary)" }}>Espace {getEspaceLabel(me)}</h1>
-        <div style={{ position: "relative", width: "384px" }}>
-          <i className="fa-solid fa-magnifying-glass" style={{ 
-            position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", 
-            color: "var(--primary)", fontSize: "1rem", opacity: 0.6 
-          }}></i>
-          <input 
-            type="text" 
-            placeholder="Search patients, records..." 
-            style={{ 
-              width: "100%", backgroundColor: "var(--bg-color)", border: "1px solid var(--border-color)", 
-              borderRadius: "9999px", padding: "12px 20px 12px 52px", fontSize: "0.875rem",
-              boxShadow: "inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)", outline: 'none',
-              transition: 'all 0.2s ease'
-            }}
-            className="search-input-focus"
-          />
-        </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -90,8 +84,8 @@ export default function Header() {
           <div style={{ background: "var(--primary)",
               color: "white", padding: "8px 14px", borderRadius: 9999, fontWeight: 600,
               fontSize: "0.875rem", lineHeight: "1", whiteSpace: "nowrap", boxShadow: "0 6px 18px rgba(0, 107, 89, 0.18)" }}
-            title={me?.username || "-"}>
-            {me?.username || "-"}
+            title={getFormattedName(me)}>
+            {getFormattedName(me)}
           </div>
         </div>
       </div>

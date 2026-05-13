@@ -4,6 +4,8 @@ from django.contrib.auth.models import Group
 from django.db import transaction
 from rest_framework import serializers
 from django.utils.text import slugify
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework.exceptions import AuthenticationFailed
 
 from .models import Patient, DossierMedical
 
@@ -62,3 +64,10 @@ class PatientSerializer(serializers.ModelSerializer):
         patient.save(update_fields=["user"])
 
         return patient
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except Exception:
+            raise AuthenticationFailed("identifiants incorrectes")

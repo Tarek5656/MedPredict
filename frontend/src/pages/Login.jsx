@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -9,13 +9,23 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(''); // ✅ État pour l'erreur locale
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Reset theme to default on login page load
+    if (!localStorage.getItem("access_token")) {
+      applyTheme("green");
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
 
     setLoading(true);
+    setErrorMsg(''); // Reset error
+    
     try {
       const response = await axios.post("http://localhost:8000/api/token/", {
         username: username.trim(),
@@ -25,7 +35,6 @@ export default function Login() {
       localStorage.setItem("access_token", response.data.access);
       localStorage.setItem("refresh_token", response.data.refresh);
 
-      // ✅ récupère l'utilisateur (superuser + groups)
       const meRes = await userService.me();
       const me = meRes.data;
 
@@ -37,9 +46,8 @@ export default function Login() {
 
       toast.success("Connexion réussie !");
 
-      // ✅ routes selon rôle
       if (isSuper) {
-        navigate("/admin", { replace: true });
+        navigate("/admin/dashboard", { replace: true });
       } else if (groups.includes("MEDECIN") || groups.includes("SECRETAIRE")) {
         navigate("/overview", { replace: true });
       } else if (groups.includes("PATIENT")) {
@@ -49,8 +57,25 @@ export default function Login() {
       }
     } catch (error) {
       const status = error?.response?.status;
-      if (status === 401) toast.error("Identifiants incorrects");
-      else toast.error("Erreur serveur / API indisponible");
+      const data = error?.response?.data;
+      
+      let msg = "Identifiants incorrects";
+      if (data) {
+        if (typeof data === 'string') msg = data;
+        else if (data.detail) msg = data.detail;
+        else if (data.non_field_errors) msg = data.non_field_errors[0];
+        else if (typeof data === 'object') {
+          const firstKey = Object.keys(data)[0];
+          if (Array.isArray(data[firstKey])) msg = data[firstKey][0];
+          else if (typeof data[firstKey] === 'string') msg = data[firstKey];
+        }
+      }
+
+      if (status === 401 || status === 400) {
+        setErrorMsg(msg); // ✅ Affiche l'erreur au-dessus du bouton
+      } else {
+        setErrorMsg("Erreur serveur / API indisponible");
+      }
       console.error("Login error:", error);
     } finally {
       setLoading(false);
@@ -91,7 +116,6 @@ export default function Login() {
               required
               disabled={loading}
               style={{ width: '100%' }}
-              placeholder="ex: docteur_lemaire"
             />
           </div>
 
@@ -105,9 +129,26 @@ export default function Login() {
               required
               disabled={loading}
               style={{ width: '100%' }}
-              placeholder="••••••••"
             />
           </div>
+
+          {/* ✅ Affichage du message d'erreur */}
+          {errorMsg && (
+            <div style={{ 
+              color: '#d32f2f', 
+              backgroundColor: '#ffebee', 
+              padding: '0.75rem', 
+              borderRadius: '8px', 
+              marginBottom: '1.5rem',
+              fontSize: '0.9rem',
+              fontWeight: 500,
+              textAlign: 'center',
+              border: '1px solid #ffcdd2'
+            }}>
+              <i className="fa-solid fa-circle-exclamation" style={{ marginRight: '8px' }}></i>
+              {errorMsg}
+            </div>
+          )}
 
           <button
             type="submit"

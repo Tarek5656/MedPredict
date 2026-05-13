@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ze$&xm#swnbq!55-*7*&%ropvosx&mxm)f*th53l)csk@xx!8j'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend", "frontend"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend", "frontend", "goldsmith-savings-avenue.ngrok-free.dev"]
 
 # Application definition
 
@@ -51,6 +53,7 @@ INSTALLED_APPS = [
     'consultations',
     'ai',
     'notifications',
+    'chatbot',
 ]
 
 MIDDLEWARE = [
@@ -90,15 +93,15 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',  # Pilote PostgreSQL
-        'NAME': 'medpredict_db',                       # Nom de la base
-        'USER': 'medpredict_user',                     # Utilisateur PostgreSQL
-        'PASSWORD': 'medpredict_password',             # Mot de passe
-        'HOST': 'db',                         # 'db' si Docker, 'localhost' si local
-        'PORT': '5432',                              # Port par défaut de PostgreSQL
+        'NAME': os.getenv('POSTGRES_DB'),                       # Nom de la base
+        'USER': os.getenv('POSTGRES_USER'),                     # Utilisateur PostgreSQL
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),             # Mot de passe
+        'HOST': os.getenv('POSTGRES_HOST'),                     # 'db' si Docker, 'localhost' si local
+        'PORT': os.getenv('POSTGRES_PORT'),                     # Port par défaut de PostgreSQL
     }
 }
 
-AI_SERVICE_URL = 'http://ai-service:5000'
+AI_SERVICE_URL = os.getenv('AI_SERVICE_URL')
 
 REST_FRAMEWORK = {
     # Authentification par défaut : JWT
@@ -175,13 +178,13 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/1")
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE  # utilise ton TIME_ZONE Django
 
-TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
-TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER", "")
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
