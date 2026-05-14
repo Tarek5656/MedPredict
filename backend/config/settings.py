@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend", "frontend", "goldsmith-sav
 
 INSTALLED_APPS = [
     # Apps Django par défaut (admin, auth, sessions, etc.)
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Apps tierces
+    'channels',
     'rest_framework',          # Django REST Framework — transforme Django en API REST
     'corsheaders',             # CORS — autorise React à appeler Django
     'django_filters',          # Filtres automatiques sur les endpoints
@@ -54,6 +56,7 @@ INSTALLED_APPS = [
     'ai',
     'notifications',
     'chatbot',
+    'messaging',
 ]
 
 MIDDLEWARE = [
@@ -85,6 +88,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 
 # Database
@@ -184,6 +188,16 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE  # utilise ton TIME_ZONE Django
+
+# Channels configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.getenv("CHANNEL_LAYERS_REDIS_URL", "redis://redis:6379/2")],
+        },
+    },
+}
 
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")

@@ -20,4 +20,5 @@ urlpatterns = [
     path("api/", include("ai.urls")),
     path("api/", include("notifications.urls")),
     path("api/", include("chatbot.urls")),
-]
+    path("api/messaging/", include("messaging.urls")),
+]

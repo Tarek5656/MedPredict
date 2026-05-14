@@ -5,7 +5,10 @@ from celery import shared_task
 import requests
 from twilio.rest import Client
 import tempfile
-from faster_whisper import WhisperModel
+try:
+    from faster_whisper import WhisperModel
+except ImportError:
+    WhisperModel = None
 
 import logging
 from .gpt_utils import get_intent_from_flask
