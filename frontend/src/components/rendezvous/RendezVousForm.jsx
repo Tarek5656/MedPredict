@@ -4,7 +4,8 @@ import rendezvousService from "../../services/rendezvousService";
 import patientService from "../../services/patientService";
 import userService from "../../services/userService";
 
-const BUSINESS_HOURS = { start: 9, end: 18 };
+const MORNING_BUSINESS_HOURS = { start: 9, end: 13 };
+const EVENING_BUSINESS_HOURS = { start: 15, end: 18 };
 const SLOT_DURATION = 15; // minutes
 
 export default function RendezVousForm({
@@ -139,8 +140,10 @@ export default function RendezVousForm({
   // Calculate Slots
   const availableSlots = useMemo(() => {
     const slots = [];
-    const startHour = BUSINESS_HOURS.start;
-    const endHour = BUSINESS_HOURS.end;
+    const startHour = MORNING_BUSINESS_HOURS.start;
+    const startBreak = MORNING_BUSINESS_HOURS.end;
+    const endBreak = EVENING_BUSINESS_HOURS.start;
+    const endHour = EVENING_BUSINESS_HOURS.end;
     
     for (let h = startHour; h < endHour; h++) {
       for (let m = 0; m < 60; m += SLOT_DURATION) {
@@ -153,8 +156,9 @@ export default function RendezVousForm({
           const apptTime = new Date(appt.date_heure).toTimeString().substring(0, 5);
           return apptTime === timeStr;
         });
-
-        slots.push({ time: timeStr, available: !isOccupied });
+        if (h < startBreak || h >= endBreak) {
+          slots.push({ time: timeStr, available: !isOccupied });
+        }
       }
     }
     return slots;
