@@ -146,7 +146,7 @@ export default function ConsultationsTab({ patientId, canEdit, patient }) {
       return {
         ...prev,
         [c.id]: {
-          symptomes: computedText,
+          symptomes: c.symptomes ?? computedText,
           symptom_codes: symptomCodes,
           notes_cliniques: c.notes_cliniques ?? "",
           diagnostic: c.diagnostic ?? "",

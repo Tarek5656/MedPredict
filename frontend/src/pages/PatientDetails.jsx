@@ -123,10 +123,12 @@ const saveDossier = async () => {
     setEditDossierMode(false);
     setCanEditDossier(true);
   } catch (e) {
+    const errorMsg = extractApiError(e);
     if (e?.response?.status === 403) {
       setCanEditDossier(false);
+      setErr("Vous n'avez pas la permission de modifier ce dossier médical.");
     } else {
-      setErr(extractApiError(e));
+      setErr(errorMsg);
     }
   } finally {
     setLoading(false);
@@ -377,6 +379,12 @@ const saveDossier = async () => {
           <h2 className="text-xl font-bold mb-6 text-primary flex items-center gap-3">
             <i className="fa-solid fa-notes-medical"></i> Dossier Médical
           </h2>
+
+          {!canEditDossier && (
+            <p className="badge badge-error mb-4">
+              Action non autorisée : Droits insuffisants pour modifier le dossier.
+            </p>
+          )}
 
           {!editDossierMode ? (
             <div className="space-y-6">
