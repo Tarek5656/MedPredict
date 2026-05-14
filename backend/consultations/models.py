@@ -28,6 +28,7 @@ class Consultation(models.Model):
     date = models.DateTimeField(default=timezone.now)
 
     symptoms = models.ManyToManyField(Symptom, blank=True, related_name="consultations")
+    symptomes = models.TextField(blank=True, default="", help_text="Texte libre des symptômes")
     notes_cliniques = models.TextField(blank=True, default="")
     diagnostic = models.TextField(blank=True, default="")
 
