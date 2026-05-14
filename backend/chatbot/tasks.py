@@ -9,7 +9,7 @@ from faster_whisper import WhisperModel
 
 import logging
 from .gpt_utils import get_intent_from_flask
-from .service import intent_action_text
+from .service import extract_datetime_from_text, intent_action_text
 from .models import ProcessedTwilioMessage
 
 logger = logging.getLogger(__name__)
@@ -113,11 +113,18 @@ def process_whatsapp_message(self, from_number: str, body: str, message_sid: str
         intent, confidence, message_used, handled, reply_text = get_intent_from_flask(body, timeout=(3, 60))
         logging.info("Intent classified: %s (confidence: %f) message: %s handled: %s reply_text: %s", intent, confidence, message_used, handled, reply_text)
 
-        body_to_use = (message_used or body).lower()
+        raw_body = body  # ce que l'utilisateur a écrit
+        intent_body = (message_used or body)  # pour classification uniquement
+
+        # Pour l'action RDV, utiliser TOUJOURS le texte utilisateur
+        body_to_use = raw_body.lower()
         if handled and reply_text:
             reply = reply_text
         else:
             reply = intent_action_text(from_number, body_to_use, intent)
+            logging.info("CREER body_to_use=%r", body_to_use)
+            dt_raw = extract_datetime_from_text(body_to_use)
+            logging.info("CREER dt=%r (type=%s)", dt_raw, type(dt_raw))
     except Exception:
         logger.exception("process_whatsapp_message failed")
         reply = "Désolé, je rencontre un problème technique. Contacte le secrétariat si besoin."

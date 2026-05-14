@@ -34,23 +34,32 @@ def _make_aware_local(year: int, month: int, day: int, hour: int, minute: int):
 
 def _parse_time(text: str):
     """
-    Supporte: "10h", "10h5", "10h05", "10:05", "10 : 05"
+    Supporte: "10h", "10h5", "10h05", "10:05", "10 : 05", "10h00"
     Retour: (hour, minute) ou None
     """
-    t = re.search(r"\b(?P<h>\d{1,2})\s*(?:h|:)\s*(?P<m>\d{1,2})\b", text)
-    if t:
-        h = int(t.group("h"))
-        m = int(t.group("m"))
-        if 0 <= h <= 23 and 0 <= m <= 59:
-            return h, m
+    text = (text or "").lower()
 
-    t = re.search(r"\b(?P<h>\d{1,2})\s*h\b", text)
-    if t:
-        h = int(t.group("h"))
-        if 0 <= h <= 23:
-            return h, 0
+    m = re.search(
+        r"\b(?P<h>\d{1,2})\s*(?:h|:)\s*(?P<m>\d{1,2})?\b",
+        text
+    )
+    if not m:
+        return None
 
-    # cas "10 30" (optionnel) -> j'évite car ambigu
+    h = int(m.group("h"))
+    m_raw = m.group("m")
+
+    # minutes manquantes => 0 (ex: 16h)
+    minute = int(m_raw) if m_raw is not None and m_raw != "" else 0
+
+    # cas "10h5" => 10:05 (optionnel mais pratique)
+    if 0 <= minute <= 9 and m_raw is not None and len(m_raw) == 1:
+        minute = minute * 10 if minute != 0 else 0  # ou minute*1; perso je préfère 10h5 = 10:05:
+        # si tu veux strictement 10h5 = 10:05:
+        minute = int(f"{m_raw:0>2}")
+
+    if 0 <= h <= 23 and 0 <= minute <= 59:
+        return h, minute
     return None
 
 def extract_datetime_from_text(text: str):
@@ -161,8 +170,7 @@ def intent_action_text(from_number: str, body_to_use: str, intent: str) -> str:
 
     # ------------ LOGIQUE CAS 1. CREER ------------
     if intent == "creer":
-        extracted = extract_datetime_from_text(body_to_use)
-        dt = timezone.localtime(extracted) if extracted else None
+        dt = extract_datetime_from_text(body_to_use)
         if not dt:
             return "Merci de préciser la date et l'heure du rendez-vous, ex : 'je veux un rendez-vous le 27/04 à 10h'."
               
@@ -203,8 +211,7 @@ def intent_action_text(from_number: str, body_to_use: str, intent: str) -> str:
         rdv.statut = "annule"
         rdv.save()
         # 2. Crée le nouveau
-        extracted = extract_datetime_from_text(body_to_use)
-        dt = timezone.localtime(extracted) if extracted else None
+        dt = extract_datetime_from_text(body_to_use)
         if not dt:
             return "Merci de préciser la nouvelle date et l'heure pour reporter ton rendez-vous, ex : 'je veux déplacer mon rdv le 27/04 à 10h'."
         data = create_rdv_data(patient, dt, body_to_use)

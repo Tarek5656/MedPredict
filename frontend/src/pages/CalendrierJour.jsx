@@ -17,11 +17,22 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
 }
 
 function buildSlots(day, stepMinutes = 15) {
-  const mk = (h, min) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, min, 0, 0);
-  const ranges = [
-    { start: mk(9, 0), end: mk(13, 0) },
-    { start: mk(15, 0), end: mk(18, 0) },
-  ];
+  const mk = (h, min) =>
+    new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, min, 0, 0);
+
+  const dow = day.getDay(); // 0=Sun, 6=Sat
+
+  // Dimanche: pas de créneaux
+  if (dow === 0) return [];
+
+  // Samedi: matin seulement
+  const ranges =
+    dow === 6
+      ? [{ start: mk(9, 0), end: mk(13, 0) }]
+      : [
+          { start: mk(9, 0), end: mk(13, 0) },
+          { start: mk(15, 0), end: mk(18, 0) },
+        ];
 
   const slots = [];
   for (const r of ranges) {
