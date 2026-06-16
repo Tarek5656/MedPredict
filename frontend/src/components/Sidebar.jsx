@@ -3,8 +3,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { menuItems } from "../utils/menuItems";
 import userService from "../services/userService";
 import { applyTheme } from "../utils/theme";
+import { useMessaging } from "../context/MessagingContext";
 
 export default function Sidebar() {
+  const messaging = useMessaging() || {};
+  const unreadTotal = messaging.unreadTotal || 0;
 
   const from = import.meta.env.VITE_TWILIO_WHATSAPP_FROM;
   const joinCode = import.meta.env.VITE_TWILIO_SANDBOX_JOIN_CODE;
@@ -23,7 +26,7 @@ export default function Sidebar() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     applyTheme("green");
-    window.location.href = "/login"; 
+    window.location.href = "/login";
   };
 
   useEffect(() => {
@@ -39,14 +42,14 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside style={{ 
+    <aside style={{
       height: "100vh", width: 256, position: "fixed", left: 0, top: 0, zIndex: 50,
       display: "flex", flexDirection: "column", padding: "24px 0", backgroundColor: "var(--bg-color)",
       borderRight: "1px solid var(--border-color)", boxSizing: "border-box"
     }}>
       <div style={{ padding: "0 32px", marginBottom: 40 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ 
+          <div style={{
             width: 40, height: 40, borderRadius: 12, background: "var(--primary)",
             display: "flex", alignItems: "center", justifyContent: "center", color: "white",
             boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)"
@@ -54,9 +57,9 @@ export default function Sidebar() {
             <i className="fa-solid fa-heart-pulse" style={{ fontSize: "20px" }}></i>
           </div>
           <div>
-            <h2 style={{ 
-              fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--primary)", 
-              lineHeight: 1.2, letterSpacing: "-0.025em" 
+            <h2 style={{
+              fontSize: "1.25rem", fontWeight: 700, margin: 0, color: "var(--primary)",
+              lineHeight: 1.2, letterSpacing: "-0.025em"
             }}>MedPredict</h2>
             <p style={{ fontSize: "0.75rem", margin: 0, color: "var(--text-muted)", opacity: 0.8 }}>Premium Care</p>
           </div>
@@ -72,25 +75,33 @@ export default function Sidebar() {
               borderRadius: 9999, textDecoration: "none", fontSize: "0.875rem", fontWeight: 500,
               backgroundColor: isActive ? "var(--primary)" : "transparent",
               color: isActive ? "white" : "var(--text-muted)",
-              transition: "all 0.2s"
+              transition: "all 0.2s",
+              position: 'relative'
             }} className={!isActive ? "hover-bg-slate" : ""}>
               <i className={item.icon} style={{ fontSize: 18, width: 24, textAlign: 'center' }}></i>
               <span>{item.name}</span>
+              {item.name === "Messagerie" && unreadTotal > 0 && location.pathname !== '/messaging' && (
+                <div style={{
+                  position: 'absolute', right: 15, top: '50%', transform: 'translateY(-50%)',
+                  width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--danger)',
+                  boxShadow: '0 0 10px var(--danger)'
+                }}></div>
+              )}
             </Link>
           );
         })}
       </nav>
 
       <div style={{ marginTop: "auto", borderTop: "1px solid var(--border-color)", paddingTop: 24, paddingBottom: 0 }}>
-        <a 
-        href={waUrl} target="_blank" rel="noopener noreferrer" style={{ 
-          display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px", margin: "4px 16px",
-          borderRadius: 9999, textDecoration: "none", fontSize: "2rem", fontWeight: 500,
-          backgroundColor: "transparent", color: "var(--primary)", border: "none", width: "calc(100% - 32px)", cursor: "pointer"
-        }} className="hover-bg-slate" title="Chatbot WhatsApp">
+        <a
+          href={waUrl} target="_blank" rel="noopener noreferrer" style={{
+            display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 16px", margin: "4px 16px",
+            borderRadius: 9999, textDecoration: "none", fontSize: "2rem", fontWeight: 500,
+            backgroundColor: "transparent", color: "var(--primary)", border: "none", width: "calc(100% - 32px)", cursor: "pointer"
+          }} className="hover-bg-slate" title="Chatbot WhatsApp">
           <i className="fa-regular fa-comment-dots"></i>
         </a>
-        <button onClick={handleLogout} style={{ 
+        <button onClick={handleLogout} style={{
           display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", margin: "4px 16px",
           borderRadius: 9999, textDecoration: "none", fontSize: "0.875rem", fontWeight: 500,
           backgroundColor: "transparent", color: "var(--text-muted)", border: "none", width: "calc(100% - 32px)", cursor: "pointer", textAlign: "left"

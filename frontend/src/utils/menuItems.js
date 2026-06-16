@@ -4,32 +4,15 @@ export function menuItems(me) {
     .filter(Boolean)
     .map((s) => String(s).trim().toUpperCase());
 
-  // menu “normal” (inchangé)
-  const base = [
-    { name: "Tableau de bord", icon: "fa-solid fa-chart-line", path: "/overview" },
-    { name: "Calendrier", icon: "fa-regular fa-calendar-days", path: "/calendrier" },
-    { name: "Patients", icon: "fa-solid fa-user-group", path: "/patients" },
-    { name: "Rendez-vous", icon: "fa-regular fa-calendar-check", path: "/rendezvous" },
-    { name: "Analyses", icon: "fa-solid fa-chart-simple", path: "/analyses" },
-  ];
-
-  // superuser : Administration + Analyses
-  if (me?.is_superuser) {
+  // 1. Superuser / Admin
+  if (me?.is_superuser || groups.includes("ADMIN")) {
     return [
       { name: "Administration", icon: "fa-solid fa-crown", path: "/admin/dashboard" },
       { name: "Analyses", icon: "fa-solid fa-chart-simple", path: "/analyses" }
     ];
   }
 
-  // medecin : ne change rien
-  if (groups.includes("MEDECIN")) return base;
-
-  // secretaire : enlever Analytics
-  if (groups.includes("SECRETAIRE")) {
-    return base.filter((item) => item.name !== "Analyses"); // ou item.path !== "/analyses"
-  }
-
-  // patient : ton menu patient
+  // 2. Patient
   if (groups.includes("PATIENT")) {
     return [
       { name: "Profil", icon: "fa-regular fa-user", path: "/patient/infos" },
@@ -39,5 +22,25 @@ export function menuItems(me) {
     ];
   }
 
-  return base;
+  // 3. Médecin ou Secrétaire
+  const isMedecin = groups.includes("MEDECIN");
+  const isSecretaire = groups.includes("SECRETAIRE");
+
+  if (isMedecin || isSecretaire) {
+    const items = [
+      { name: "Tableau de bord", icon: "fa-solid fa-chart-line", path: "/overview" },
+      { name: "Calendrier", icon: "fa-regular fa-calendar-days", path: "/calendrier" },
+      { name: "Patients", icon: "fa-solid fa-user-group", path: "/patients" },
+      { name: "Rendez-vous", icon: "fa-regular fa-calendar-check", path: "/rendezvous" },
+      { name: "Messagerie", icon: "fa-solid fa-comments", path: "/messaging" },
+    ];
+
+    if (isMedecin) {
+      items.push({ name: "Analyses", icon: "fa-solid fa-chart-simple", path: "/analyses" });
+    }
+
+    return items;
+  }
+
+  return [];
 }

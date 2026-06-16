@@ -37,6 +37,7 @@ export default function Login() {
 
       const meRes = await userService.me();
       const me = meRes.data;
+      localStorage.setItem("user", JSON.stringify(me));
 
       const groups = (me.groups || []).map((g) => (typeof g === "string" ? g : g.name)).map((s) => s.toUpperCase());
       const isSuper = !!me.is_superuser;
