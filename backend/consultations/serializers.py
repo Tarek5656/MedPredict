@@ -73,17 +73,13 @@ class ConsultationSerializer(serializers.ModelSerializer):
                 attrs["symptoms"] = []
                 return attrs
 
+            # On ne filtre que les codes qui existent réellement en base
+            # pour éviter l'erreur "Codes inconnus" qui bloque l'enregistrement
             qs = Symptom.objects.filter(code__in=cleaned)
             found = list(qs)
 
-            found_codes = {s.code for s in found}
-            missing = [c for c in cleaned if c not in found_codes]
-            if missing:
-                raise serializers.ValidationError(
-                    {"symptom_codes": [f"Codes inconnus: {', '.join(missing)}"]}
-                )
-
-            # option: garder l'ordre comme l'utilisateur l'a envoyé
+            # Optionnel: On peut loguer les codes manquants ou simplement les ignorer
+            # Ici on les ignore pour permettre au médecin d'enregistrer son texte libre
             by_code = {s.code: s for s in found}
             attrs["symptoms"] = [by_code[c] for c in cleaned if c in by_code]
 
@@ -98,6 +94,7 @@ class ConsultationSerializer(serializers.ModelSerializer):
             "medecin_username",
             "rendezvous",
             "date", "symptoms",
+            "symptomes",
             "symptom_ids",
             "symptom_codes",
             "ai_predicted_disease",

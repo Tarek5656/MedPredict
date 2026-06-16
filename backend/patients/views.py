@@ -8,7 +8,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Patient, DossierMedical
 from .serializers import PatientSerializer, DossierMedicalSerializer, MyTokenObtainPairSerializer
-from .permissions import IsSecretaire, IsMedecin
+from .permissions import IsSecretaire, IsMedecin, IsSecretaireOrMedecin
 from .filters import PatientFilter
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -117,7 +117,7 @@ class PatientViewSet(viewsets.ModelViewSet):
         # Permissions spécifiques à l'action dossier-medical
         if getattr(self, "action", None) == "dossier_medical":
             if self.request.method == "PATCH":
-                return [IsAuthenticated(), IsSecretaire() | IsMedecin()]
+                return [IsAuthenticated(), IsSecretaireOrMedecin()]
             return [IsAuthenticated()]
 
         # CRUD Patient => secrétaire (ou admin via IsSecretaire)

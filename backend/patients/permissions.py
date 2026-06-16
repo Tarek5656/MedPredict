@@ -11,6 +11,10 @@ class IsMedecin(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_superuser or user_in_group(request.user, "MEDECIN")
     
+class IsSecretaireOrMedecin(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_superuser or user_in_group(request.user, "SECRETAIRE") or user_in_group(request.user, "MEDECIN")
+    
 class IsPatient(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_superuser or user_in_group(request.user, "PATIENT")

@@ -194,13 +194,11 @@ class ConsultationViewSet(viewsets.ModelViewSet):
             # nécessite Patient.user = OneToOneField(User)
             return qs.filter(patient__user=user)
 
-        # Médecin / secrétaire: tu peux décider la règle
-        # ex médecin voit seulement ses consultations:
-        if "MEDECIN" in groups:
-            return qs.filter(medecin=user)
+        # Médecin / secrétaire: voient tout (ou filtrage par clinique/service si besoin)
+        if "MEDECIN" in groups or "SECRETAIRE" in groups:
+            return qs
 
-        # secrétaire voit tout (à adapter)
-        return qs
+        return qs.none()
     
     @action(detail=False, methods=["get"], url_path="me")
     def me(self, request):

@@ -86,6 +86,12 @@ export default function PatientDetail() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    if (me && !isAdmin && !isMedecin) {
+      setActiveTab("rdv");
+    }
+  }, [me, isAdmin, isMedecin]);
+
   const savePatient = async () => {
   setErr(null);
   setLoading(true);
@@ -123,10 +129,12 @@ const saveDossier = async () => {
     setEditDossierMode(false);
     setCanEditDossier(true);
   } catch (e) {
+    const errorMsg = extractApiError(e);
     if (e?.response?.status === 403) {
       setCanEditDossier(false);
+      setErr("Vous n'avez pas la permission de modifier ce dossier médical.");
     } else {
-      setErr(extractApiError(e));
+      setErr(errorMsg);
     }
   } finally {
     setLoading(false);
@@ -378,6 +386,12 @@ const saveDossier = async () => {
             <i className="fa-solid fa-notes-medical"></i> Dossier Médical
           </h2>
 
+          {!canEditDossier && (
+            <p className="badge badge-error mb-4">
+              Action non autorisée : Droits insuffisants pour modifier le dossier.
+            </p>
+          )}
+
           {!editDossierMode ? (
             <div className="space-y-6">
               <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
@@ -472,18 +486,20 @@ const saveDossier = async () => {
 
       {/* Premium Tabs Section */}
       <div className="flex p-1.5 bg-gray-100/60 rounded-2xl mb-8 w-fit border border-gray-100 shadow-sm">
-        <button
-          onClick={() => setActiveTab("consultations")}
-          className={`flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
-            activeTab === "consultations"
-              ? "bg-primary text-white shadow-lg transform scale-105"
-              : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
-          }`}
-          style={{ boxShadow: activeTab === "consultations" ? 'var(--shadow-md)' : 'none' }}
-        >
-          <i className="fa-solid fa-file-waveform"></i>
-          Consultations
-        </button>
+        {(isAdmin || isMedecin) && (
+          <button
+            onClick={() => setActiveTab("consultations")}
+            className={`flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+              activeTab === "consultations"
+                ? "bg-primary text-white shadow-lg transform scale-105"
+                : "text-gray-400 hover:text-gray-600 hover:bg-white/50"
+            }`}
+            style={{ boxShadow: activeTab === "consultations" ? 'var(--shadow-md)' : 'none' }}
+          >
+            <i className="fa-solid fa-file-waveform"></i>
+            Consultations
+          </button>
+        )}
         <button
           onClick={() => setActiveTab("rdv")}
           className={`flex items-center gap-3 px-8 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
@@ -499,21 +515,15 @@ const saveDossier = async () => {
       </div>
 
       <div className="relative">
-        <div style={{ display: activeTab === "consultations" ? "block" : "none" }} className="animate-fadeIn">
-          {isAdmin || isMedecin ? (
+        {(isAdmin || isMedecin) && (
+          <div style={{ display: activeTab === "consultations" ? "block" : "none" }} className="animate-fadeIn">
             <ConsultationsTab
               patientId={patient.id}
               canEdit={isAdmin || isMedecin}
               patient={patient}
             />
-          ) : (
-            <div className="card p-12 text-center text-gray-500 bg-gray-50/50">
-              <i className="fa-solid fa-lock text-3xl mb-4 opacity-20"></i>
-              <p className="font-semibold text-lg">Accès Restreint</p>
-              <p className="text-sm">Seul le personnel médical peut consulter les dossiers cliniques.</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
         
         <div style={{ display: activeTab === "rdv" ? "block" : "none" }} className="animate-fadeIn">
           <RendezVousTab patientId={patient.id} canCreate={isSecretaire || isAdmin} />

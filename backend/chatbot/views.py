@@ -3,8 +3,6 @@ from rest_framework.views import APIView
 from django.http import HttpResponse
 from twilio.twiml.messaging_response import MessagingResponse
 
-from chatbot.service import extract_datetime_from_text
-from django.utils import timezone
 from .tasks import process_whatsapp_message, process_whatsapp_audio
 import traceback
 import logging
@@ -28,11 +26,6 @@ class WhatsAppWebhookView(APIView):
         message_type = (request.POST.get("MessageType") or "").lower()
         media_url0 = request.POST.get("MediaUrl0")
         media_type0 = (request.POST.get("MediaContentType0") or "").lower()
-
-        logging.info("RAW body_to_use=%r", body)
-        dt_raw = extract_datetime_from_text(body)
-        logging.info("extract_datetime_from_text(body) => %r", dt_raw)
-        logging.info("now_local => %r", timezone.localtime(timezone.now()))
 
         try:
             t0 = time.time()
