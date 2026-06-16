@@ -90,12 +90,15 @@ const ChatWindow = () => {
 
       // Si le message appartient à la conversation active
       if (activeContact && (lastMsg.sender_id === activeContact.id || lastMsg.receiver_id === activeContact.id)) {
-        setConversationMessages(prev => [...prev, {
-          id: Date.now() + Math.random(),
-          sender: lastMsg.sender_id,
-          content: lastMsg.message,
-          timestamp: lastMsg.timestamp
-        }]);
+        // Ignorer si on est l'expéditeur, car on a déjà fait un affichage optimiste
+        if (lastMsg.sender_id !== currentUser?.id) {
+          setConversationMessages(prev => [...prev, {
+            id: Date.now() + Math.random(),
+            sender: lastMsg.sender_id,
+            content: lastMsg.message,
+            timestamp: lastMsg.timestamp
+          }]);
+        }
         
         // Marquer comme lu immédiatement si on est déjà dans la conversation
         if (lastMsg.sender_id === activeContact.id) {
@@ -114,6 +117,15 @@ const ChatWindow = () => {
 
   const handleSend = () => {
     if (!inputValue.trim() || !activeContact) return;
+    
+    // Affichage optimiste du message immédiatement
+    const tempMsg = {
+      id: Date.now() + Math.random(),
+      sender: currentUser?.id || null, // Ensure we use current user ID for sent styling
+      content: inputValue,
+      timestamp: new Date().toISOString()
+    };
+    setConversationMessages(prev => [...prev, tempMsg]);
     
     sendMessage(inputValue, activeContact.id);
     setInputValue('');
