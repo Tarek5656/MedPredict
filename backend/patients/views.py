@@ -130,6 +130,30 @@ class PatientViewSet(viewsets.ModelViewSet):
         patient = serializer.save()
         DossierMedical.objects.get_or_create(patient=patient)
 
+        # Création automatique du compte utilisateur
+        if patient.email and patient.telephone:
+            from django.contrib.auth import get_user_model
+            from django.contrib.auth.models import Group
+            User = get_user_model()
+            
+            # Vérifier si l'utilisateur n'existe pas déjà
+            if not User.objects.filter(username=patient.email).exists():
+                user = User.objects.create_user(
+                    username=patient.email,
+                    email=patient.email,
+                    password=patient.telephone,
+                    first_name=patient.prenom,
+                    last_name=patient.nom
+                )
+                
+                # Ajouter au groupe PATIENT
+                patient_group, _ = Group.objects.get_or_create(name="PATIENT")
+                user.groups.add(patient_group)
+                
+                # Lier l'utilisateur au dossier patient
+                patient.user = user
+                patient.save()
+
     @action(detail=True, methods=["get", "patch"], url_path="dossier-medical")
     def dossier_medical(self, request, pk=None):
         patient = self.get_object()
