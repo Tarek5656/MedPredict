@@ -127,8 +127,6 @@ Le système est décomposé en trois services principaux communiquant via des AP
 
 ## Variables d'Environnement
 
-Assurez-vous que les variables suivantes sont définies dans votre fichier `.env` (à ne jamais commiter sur Git) :
-
 ```env
 # Django
 DJANGO_SECRET_KEY=votre_cle_secrete_django
